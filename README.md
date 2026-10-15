@@ -12,11 +12,12 @@ It measures and advises. It does not build, host, or deploy.
 
 ## Status
 
-Under construction — round 1 of 3 (scaffold).
+Round 2 of 4. The `on-page` capability works and produces append-only evidence
+runs; the reference set and the system map are still pending.
 
-Nothing in `references/`, `scripts/`, or `docs/system-map/` exists yet.
-**[PLAN.md](PLAN.md) is the only source of truth until it does.** Do not cite
-this skill as a rule yet.
+**[PLAN.md](PLAN.md) is the design source of truth.** Do not cite this skill as
+a rule yet: `references/` does not exist, so the SEO rules still live in the
+consuming workspace's chore documents until their replacements land.
 
 ## Repository layout
 

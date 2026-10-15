@@ -15,15 +15,27 @@ description: >-
 
 ## Status
 
-**Runde 1 von 3 — Scaffold. Noch keine lauffähigen Werkzeuge.**
+**Round 2 of 4 — one capability working. References still pending.**
 
-This skill is under construction. `references/`, `scripts/`, and
-`docs/system-map/` do not exist yet. The full design, scope decisions, and
-migration map are in [PLAN.md](PLAN.md). Read that before planning work here.
+`scripts/` is live: `on-page` audits a static output directory and writes an
+append-only evidence run. `references/` and `docs/system-map/` do not exist yet.
 
-Nothing in this skill may be cited as a rule until the corresponding reference
-file exists. During construction the only source of truth is
-[PLAN.md](PLAN.md).
+**Nothing in this skill may be cited as a rule until the corresponding reference
+file exists.** Until round 3a lands, `hugo-wizard`'s own chore documents remain
+where SEO rules live, and they stay there until their replacement exists.
+Full design and migration map: [PLAN.md](PLAN.md).
+
+## Quick start
+
+```
+python scripts/wo.py init-site --site-url https://example.com
+python scripts/wo.py on-page              # audit, write one evidence run
+python scripts/wo.py runs                 # list stored runs
+python scripts/wo.py on-page --dry-run    # audit, write nothing
+```
+
+Configure with `site.optimizer.toml` (portable, commit it) and
+`site.optimizer.local.toml` (machine paths, do not commit it).
 
 ## Router (planned)
 

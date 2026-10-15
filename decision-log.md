@@ -401,3 +401,63 @@ state. Legal hold and statutory deletion still override both classes.
 recorded in the receipt, never guessed while writing findings. Within `audit-run`
 the newest run is the working reference and older runs are `superseded` but stay
 readable.
+
+## D20 — Site configuration is TOML, not YAML
+
+**Date:** 2026-10-15
+**Status:** accepted
+**support_level:** fully_supported
+**references:**
+  - `../authoring-guide.md` (Python-first, standard library only, zero pip dependencies)
+
+Configuration is `site.optimizer.toml`, read with `tomllib`.
+
+**Reason:** Python 3.11 shipped `tomllib` in the standard library; YAML did not.
+The authoring guide mandates stdlib-only with zero pip dependencies, so a YAML
+config would either break that rule or silently rely on PyYAML being installed on
+one particular machine. `yaml` happens to be present on this host, which is
+exactly the kind of accident that breaks on the next one.
+
+**Consequence:** the config filename in the plan changes from `.yaml` to `.toml`.
+Layering is unchanged: the portable file is committed, the `.local.toml` overlay
+is not.
+
+## D21 — Capability directories use identifiers, commands keep hyphens
+
+**Date:** 2026-10-15
+**Status:** accepted
+**support_level:** fully_supported
+
+The package is `capabilities/on_page/`; the command the user types is
+`wo.py on-page`.
+
+**Reason:** D11 named the capability `on-page`, and the first test run failed with
+a `SyntaxError` — a hyphen is a valid command name and an invalid Python
+identifier, so `wo.capabilities.on-page.audit` cannot appear in an import
+statement. The interface keeps the hyphen because that is what a human reads; the
+module namespace uses the underscore because that is what Python parses.
+
+**Consequence:** `REGISTRY` maps the command name to the module path, so the two
+spellings are related in exactly one place. Renaming a capability touches the
+registry entry, the directory, and its README — never the command spelling.
+
+## D22 — The ported capability fixes one defect in the original
+
+**Date:** 2026-10-15
+**Status:** accepted
+**support_level:** fully_supported
+**references:** `hugo-wizard/scripts/audit-site-seo.py`
+
+`audit_html_file()` accepted an `ignore_noindex` parameter that no caller ever
+passed, so the flag existed on paper and the `noindex` finding could never be
+suppressed. The port wires `--ignore-noindex` through, and a test asserts both
+directions.
+
+**Reason:** a finding whose suppression switch does nothing is worse than no
+switch, because it teaches the reader that suppression is possible. The parity
+test runs with suppression off, which is the original's only observable
+behaviour, so parity is unaffected.
+
+**Consequence:** this is the one intentional behaviour change in the port. It is
+recorded here because everything else about the port is meant to be
+indistinguishable from what it replaces.

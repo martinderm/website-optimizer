@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martinderm/website-optimizer/schemas/audit-report.schema.json",
+  "title": "Website Optimizer Audit Report",
+  "description": "One run's findings. Findings are atomic: a rule, an observed value, an expected value, a source location. A verdict is derived from these, never written into them.",
+  "type": "object",
+  "required": [
+    "report_version",
+    "tool",
+    "generated_at",
+    "crawl_mode",
+    "site",
+    "source",
+    "summary",
+    "pages",
+    "findings"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "report_version": {"type": "string", "minLength": 1},
+    "tool": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "version": {"type": "string"}
+      }
+    },
+    "generated_at": {"type": "string", "minLength": 1},
+    "crawl_mode": {"enum": ["static", "live"]},
+    "site": {
+      "type": "object",
+      "required": ["url", "domain"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {"type": "string"},
+        "domain": {"type": "string"}
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["kind"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {"enum": ["static_dir", "live_crawl"]},
+        "path": {"type": ["string", "null"]}
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": [
+        "total_html_files",
+        "audited_pages",
+        "ignored_pages",
+        "clean_pages",
+        "pages_with_findings",
+        "total_critical_issues",
+        "total_warnings"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "total_html_files": {"type": "integer", "minLength": 0},
+        "audited_pages": {"type": "integer", "minLength": 0},
+        "ignored_pages": {"type": "integer", "minLength": 0},
+        "clean_pages": {"type": "integer", "minLength": 0},
+        "pages_with_findings": {"type": "integer", "minLength": 0},
+        "total_critical_issues": {"type": "integer", "minLength": 0},
+        "total_warnings": {"type": "integer", "minLength": 0}
+      }
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "source", "title", "canonical", "description_length",
+          "og_image", "schemas", "h1_count"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "source": {"type": "string"},
+          "title": {"type": "string"},
+          "canonical": {"type": ["string", "null"]},
+          "description_length": {"type": "integer", "minLength": 0},
+          "og_image": {"type": ["string", "null"]},
+          "schemas": {"type": "array", "items": {"type": "string"}},
+          "h1_count": {"type": "integer", "minLength": 0}
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "rule_id", "severity", "message", "observed",
+          "expected", "page", "location"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["critical", "warning"]},
+          "message": {"type": "string", "minLength": 1},
+          "observed": {},
+          "expected": {},
+          "page": {"type": "string"},
+          "location": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

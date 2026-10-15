@@ -1,0 +1,164 @@
+"""Fact extraction from a single HTML page.
+
+Scope rule (decision D13): this module extracts *fields* only. It never retains
+body text, comments, or any prose supplied by the page. A finding quotes an
+extracted value and its source location, never a passage of page content.
+
+Keeping the document free of page text is not tidiness, it is the boundary that
+makes an audit of an untrusted site safe to read: whatever a crawled page
+contains, it cannot travel forward through this module into a report or into an
+agent context.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from html.parser import HTMLParser
+from pathlib import Path
+
+OG_PROPERTIES = ("og:title", "og:description", "og:image", "og:url", "og:type", "og:locale")
+TWITTER_NAMES = ("twitter:card", "twitter:image")
+
+
+@dataclass
+class Page:
+    """The audit-relevant facts of one page. Fields, never prose."""
+
+    source: str = ""
+    is_404: bool = False
+    title: str = ""
+    title_found: bool = False
+    lang: str | None = None
+    description: str | None = None
+    canonical: str | None = None
+    robots: str | None = None
+    og: dict[str, str] = field(default_factory=dict)
+    twitter: dict[str, str] = field(default_factory=dict)
+    h1_count: int = 0
+    has_main: bool = False
+    has_skip_link: bool = False
+    images_total: int = 0
+    images_missing_alt: int = 0
+    schemas: list[str] = field(default_factory=list)
+
+    @property
+    def description_length(self) -> int:
+        return len(self.description) if self.description else 0
+
+
+class _Extractor(HTMLParser):
+    """Collects audit fields. Deliberately has no attribute for body text."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self._in_title = False
+        self._in_json_ld = False
+        self._title_parts: list[str] = []
+        self._json_ld_chunks: list[str] = []
+        self.page = Page(source="")
+
+    def handle_starttag(self, tag, attrs):
+        attr = {k.lower(): (v or "") for k, v in attrs}
+
+        if tag == "html":
+            self.page.lang = attr.get("lang")
+        elif tag == "title":
+            self._in_title = True
+            self.page.title_found = True
+        elif tag == "meta":
+            self._handle_meta(attr)
+        elif tag == "link":
+            if attr.get("rel", "").lower() == "canonical":
+                self.page.canonical = attr.get("href", "").strip()
+        elif tag == "h1":
+            self.page.h1_count += 1
+        elif tag == "main":
+            self.page.has_main = True
+        elif tag == "a":
+            href = attr.get("href", "")
+            if "#main-content" in href or "skip-link" in attr.get("class", ""):
+                self.page.has_skip_link = True
+        elif tag == "img":
+            self.page.images_total += 1
+            if "alt" not in attr:
+                self.page.images_missing_alt += 1
+        elif tag == "script":
+            if attr.get("type", "").lower() == "application/ld+json":
+                self._in_json_ld = True
+
+    def handle_endtag(self, tag):
+        if tag == "title":
+            self._in_title = False
+        elif tag == "script" and self._in_json_ld:
+            self._in_json_ld = False
+
+    def handle_data(self, data):
+        # Only two sinks are permitted: the title (a metadata field) and JSON-LD
+        # (structured data, parsed below). Everything else is dropped on the floor.
+        if self._in_title:
+            self._title_parts.append(data)
+        elif self._in_json_ld:
+            self._json_ld_chunks.append(data)
+
+    def _handle_meta(self, attr: dict[str, str]) -> None:
+        name = attr.get("name", "").lower()
+        prop = attr.get("property", "").lower()
+        content = attr.get("content", "").strip()
+
+        if name == "description":
+            self.page.description = content
+        elif name == "robots":
+            self.page.robots = content
+        elif name in TWITTER_NAMES:
+            self.page.twitter[name] = content
+
+        if prop in OG_PROPERTIES:
+            self.page.og[prop] = content
+
+    def finish(self) -> Page:
+        self.page.title = "".join(self._title_parts).strip()
+        for chunk in self._json_ld_chunks:
+            raw = chunk.strip()
+            if not raw:
+                continue
+            try:
+                _collect_types(json.loads(raw), self.page.schemas)
+            except (ValueError, TypeError):
+                # Malformed JSON-LD is a page defect, not a crash. The schema
+                # capability reports it; extraction stays quiet here.
+                continue
+        return self.page
+
+
+def _collect_types(node, sink: list[str]) -> None:
+    """Walk JSON-LD and record every @type encountered, including inside @graph."""
+    if isinstance(node, dict):
+        node_type = node.get("@type")
+        if isinstance(node_type, str):
+            sink.append(node_type)
+        graph = node.get("@graph")
+        if isinstance(graph, list):
+            for item in graph:
+                _collect_types(item, sink)
+    elif isinstance(node, list):
+        for item in node:
+            _collect_types(item, sink)
+
+
+def extract_page(file_path: Path, source_label: str | None = None) -> Page:
+    """Extract audit fields from one HTML file."""
+    file_path = Path(file_path)
+    content = file_path.read_text(encoding="utf-8", errors="replace")
+
+    parser = _Extractor()
+    parser.feed(content)
+    page = parser.finish()
+    page.source = source_label if source_label is not None else file_path.name
+    page.is_404 = file_path.name == "404.html"
+    return page
+
+
+def iter_html_files(root: Path):
+    """Yield every HTML file under root, as a stable, sorted sequence."""
+    return sorted(Path(root).rglob("*.html"))
