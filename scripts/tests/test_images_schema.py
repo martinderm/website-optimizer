@@ -31,6 +31,29 @@ def _ids(findings):
 
 
 class ImagesTest(unittest.TestCase):
+    def test_img_without_src_is_reported_once_not_three_times(self):
+        """A JavaScript placeholder is not a delivery fault.
+
+        Regression: an <img> with no src was counted as a critical missing
+        dimension and a missing srcset as well, which made 140 of 469 critical
+        findings on the reference site describe elements that download nothing.
+        """
+        page = _page('<html lang="de"><img class="lightbox" data-image alt=""></html>')
+        findings = images.audit_page(page)
+        image_rules = [f["rule_id"] for f in findings if f["rule_id"].startswith("image.src")]
+        self.assertEqual(image_rules, ["image.src_missing"])
+        missing = next(f for f in findings if f["rule_id"] == "image.src_missing")
+        self.assertEqual(missing["severity"], "warning")
+        self.assertIn("no src at all", missing["message"])
+
+    def test_empty_src_is_distinguished_from_absent_src(self):
+        """A bare `src` attribute parses as src="", which fetches the page."""
+        page = _page('<html lang="de"><img src alt=""></html>')
+        findings = [f for f in images.audit_page(page) if f["rule_id"] == "image.src_missing"]
+        self.assertEqual(len(findings), 1)
+        self.assertIn("empty src", findings[0]["message"])
+        self.assertIn("requests the page URL", findings[0]["message"])
+
     def test_missing_dimensions_is_critical(self):
         page = _page('<html lang="de"><img src="/a.jpg"></html>')
         findings = [f for f in images.audit_page(page) if f["rule_id"] == "image.dimensions_missing"]
@@ -91,6 +114,7 @@ class ImagesTest(unittest.TestCase):
         no_icons = _page(
             '<html lang="de"><meta property="og:image" content="/og.jpg">'
             '<img src="/a.jpg">'
+            '<img class="lightbox" data-image alt="">'
             '<img src="/b.jpg" width="8" height="6" srcset="/b.jpg 800w"></html>'
         )
         with_icons = _page('<html lang="de"><link rel="icon" href="/favicon.ico"></html>')

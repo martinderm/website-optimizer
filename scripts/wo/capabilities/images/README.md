@@ -21,6 +21,7 @@ only; the value itself is authored prose and a report has no use for it.
 
 | rule_id | Severity | Fires when |
 |---|---|---|
+| `image.src_missing` | warning | `<img>` with no `src`, or an empty one — nothing can load |
 | `image.dimensions_missing` | critical | `<img>` without `width` or `height` — the browser cannot reserve space, so CLS |
 | `image.srcset_missing` | warning | no candidate set; the image cannot adapt to the viewport |
 | `image.sizes_missing` | warning | width-descriptor `srcset` without `sizes` — the browser picks the wrong candidate |
@@ -32,6 +33,18 @@ only; the value itself is authored prose and a report has no use for it.
 
 `width="100%"` does not count as a dimension: the check requires a number,
 because that is what reserves space.
+
+An `<img>` with no `src` is reported by `image.src_missing` **instead of**
+`image.dimensions_missing` and `image.srcset_missing`, not in addition to them.
+An element that downloads nothing reserves no space and adapts to nothing, so
+counting it as a missing dimension inflated the critical count by counting
+JavaScript placeholders as delivery faults. On the reference site that was 140
+of 469 — thirty percent of the headline number.
+
+The bare-attribute case is the one to fix first. `<img src alt>` parses as
+`src=""`, which resolves against the document, so the browser issues a genuine
+request for the page itself as an image. It is a real network cost and a real
+symptom of a template that emits an attribute it has not filled yet.
 
 `image.loading_unset` reports once per page rather than once per image. A site
 that lazy-loads nothing has one problem, not two hundred.

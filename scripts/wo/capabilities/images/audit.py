@@ -40,23 +40,66 @@ def _finding(rule_id, severity, message, observed, expected, subject, location):
 
 # --- per-image rules -------------------------------------------------------
 
-def image_dimensions(page: Page) -> list[dict]:
-    """Without width and height the browser cannot reserve space (CLS)."""
+def image_src_missing(page: Page) -> list[dict]:
+    """An <img> the browser cannot fetch, whatever its other attributes say.
+
+    Two different defects share one rule because both are fixed the same way —
+    the template must emit a real URL:
+
+    - `src` absent entirely: the placeholder waits for JavaScript and nothing
+      loads until it runs.
+    - `src` present but empty: worse. The HTML parser reads a bare `src`
+      attribute as `src=""`, which resolves against the document, so the
+      browser issues a real request for the HTML page itself as an image.
+
+    Neither is a missing-dimension problem. There is no image to reserve space
+    for, so this rule replaces the dimension and srcset findings for these
+    elements rather than stacking on top of them.
+    """
     findings = []
     for image in page.images:
+        if image["src"]:
+            continue
+        if image["src_present"]:
+            message = "<img> has an empty src: the browser requests the page URL as an image"
+        else:
+            message = "<img> has no src at all: it stays empty until JavaScript fills it"
+        findings.append(_finding(
+            "image.src_missing", WARNING, message,
+            "src" if image["src_present"] else None,
+            "a real image URL", page.source, "body > img"))
+    return findings
+
+
+def image_dimensions(page: Page) -> list[dict]:
+    """Without width and height the browser cannot reserve space (CLS).
+
+    An <img> with no src is excluded: nothing is downloaded, so it reserves no
+    space and shifts nothing. It is reported once by `image.src_missing`.
+    """
+    findings = []
+    for image in page.images:
+        if not image["src"]:
+            continue
         if image["width"] is None or image["height"] is None:
             missing = [d for d in ("width", "height") if image[d] is None]
             findings.append(_finding(
                 "image.dimensions_missing", CRITICAL,
-                f"<img> has no {' and no '.join(missing)}: {image['src'] or '(no src)'}",
+                f"<img> has no {' and no '.join(missing)}: {image['src']}",
                 missing, ["width", "height"], page.source, "body > img"))
     return findings
 
 
 def image_srcset(page: Page) -> list[dict]:
-    """An image without a candidate set cannot adapt to the viewport."""
+    """An image without a candidate set cannot adapt to the viewport.
+
+    An <img> with no src is excluded for the same reason as in
+    `image_dimensions`; there is no candidate to adapt.
+    """
     findings = []
     for image in page.images:
+        if not image["src"]:
+            continue
         if not image["srcset"]:
             findings.append(_finding(
                 "image.srcset_missing", WARNING,
@@ -156,6 +199,7 @@ def og_image_absolute(page: Page) -> list[dict]:
 
 
 RULES = (
+    image_src_missing,
     image_dimensions,
     image_srcset,
     image_sizes,
@@ -165,6 +209,7 @@ RULES = (
 )
 
 CHECKS: tuple[str, ...] = (
+    "image.src_missing",
     "image.dimensions_missing",
     "image.srcset_missing",
     "image.sizes_missing",

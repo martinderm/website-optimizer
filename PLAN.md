@@ -59,7 +59,7 @@ line says otherwise.
 website-optimizer/
 ├── SKILL.md                  router + source-of-truth table
 ├── PLAN.md                   this file
-├── decision-log.md           durable decisions D1–D30
+├── decision-log.md           durable decisions D1–D31
 ├── README.md
 ├── LICENSE                   MIT
 ├── references/               13 files
@@ -450,7 +450,7 @@ reports and baselines into the consuming workspace by design.
 |---|---|---|
 | `on-page` | done | parity vs. the original, 173 pages |
 | `redirects` | done | parity vs. the original, 53 live rules |
-| `images` | done | 173 pages; every rule re-counted independently, 469/469 exact |
+| `images` | done | 173 pages; every rule re-counted independently, one false-positive class found and removed |
 | `schema` | done | 173 blocks, 4 types; found a real `#artist` `sameAs` inconsistency |
 | `compare` | done | regression, improvement, check-change, site-change |
 | live crawl | **not started** | — |
@@ -477,9 +477,18 @@ items that were not on any list:
 
 - Fixed: `--config` silently dropped the local overlay, so the documented
   invocation could not see a configured site at all. D29.
+- Fixed: `<img>` without a `src` was counted three times over, including as a
+  critical missing dimension. 140 of 469 critical findings on the reference site
+  described elements that download nothing. Now `image.src_missing`. D31.
 - Documented, not fixed: `image.loading_unset` misses every page with a mixed
   `loading` declaration — 121 pages on the reference site. Tightening it needs a
   fold heuristic, which `performance.md` owns. D30.
+
+**The lesson worth keeping:** all four verification claims from round 2 passed,
+and all three defects above were outside anything they covered. Parity checks
+prove a port did not lose the original's rules. They say nothing about whether
+the rules themselves are right. That question needed a second opinion from the
+data, not a third look at the code.
 
 ---
 

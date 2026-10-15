@@ -650,3 +650,32 @@ and reported not at all.
 strategy"*, never *"every image declares one"*. Reading a finding count as a
 statement about the site rather than about the rule is the failure mode this
 entry exists to prevent.
+
+---
+
+## D31 - An element that fetches nothing is not a delivery finding
+
+**Status:** accepted
+**Support level:** observed
+
+**Decision:** an `<img>` whose `src` is empty or absent is reported once, by
+`image.src_missing`, and is excluded from `image.dimensions_missing` and
+`image.srcset_missing`. `page.py` keeps the presence of the key separately from
+its value, so a bare `src` attribute can be told from a missing one.
+
+**Reason:** nothing is downloaded for such an element, so it reserves no space
+and shifts nothing. Counting it as a missing dimension says the site will have a
+layout shift where it will not. On the reference site this was 140 of 469
+critical findings - thirty percent of the headline number - all instances of one
+Hugo lightbox template. The same element was also reported as a missing `srcset`,
+so one `<img>` produced three findings and the most alarming of them was false.
+
+**Why the two cases are one rule:** both are fixed the same way, by a template
+that emits a real URL. Splitting them would double the count without adding a
+decision. They are separated in the message instead, because the bare attribute
+is the more serious one: `<img src alt>` parses as `src=""`, which resolves
+against the document, so the browser issues a real request for the page itself
+as an image.
+
+**Consequence:** the critical count for that site is 329, not 469. Both numbers
+were correct for the rules as written; only one describes the site.

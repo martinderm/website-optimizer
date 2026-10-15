@@ -109,6 +109,11 @@ class _Extractor(HTMLParser):
             alt_value = attr.get("alt") or ""
             self.page.images.append({
                 "src": attr.get("src", "").strip(),
+                # `src` absent and `src=""` parse to the same empty string but are
+                # different defects: the empty attribute makes the browser request
+                # the page URL as an image. The rule that reports this needs to
+                # tell them apart, so the presence of the key is kept.
+                "src_present": "src" in attr,
                 "srcset": attr.get("srcset", "").strip() or None,
                 "sizes": attr.get("sizes", "").strip() or None,
                 "width": _int_or_none(attr.get("width")),
