@@ -104,6 +104,12 @@ def load(path: Path | None = None, workspace_root: Path | None = None) -> SiteCo
         if not path.is_file():
             raise ConfigError(f"Configuration file not found: {path}")
         data = _read_toml(path)
+        # The explicit path names the *base* file. The local overlay still
+        # applies, or `--config site.optimizer.toml` would silently drop every
+        # machine-specific path — the exact call the docs tell people to use.
+        sibling = path.parent / CONFIG_NAMES[1]
+        if sibling.is_file() and sibling.resolve() != path.resolve():
+            data = _merge(data, _read_toml(sibling))
     else:
         portable = root / CONFIG_NAMES[0]
         if not portable.is_file():

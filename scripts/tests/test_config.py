@@ -31,6 +31,16 @@ strict = true
 """
 
 
+LOCAL_COMPLETE = """\
+[site]
+url = "https://example.com"
+static_dir = "D:/sites/example/public"
+
+[audit]
+strict = true
+"""
+
+
 class ConfigTest(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory()
@@ -57,6 +67,44 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(cfg.ignore_path, "admin/.*")
         self.assertEqual(cfg.capabilities, ["on-page"])
         self.assertEqual(cfg.site_url, "https://example.com")
+
+    def test_explicit_config_still_applies_the_local_layer(self):
+        """--config names the base file; the sibling overlay still applies.
+
+        Regression: the local file was only merged in the auto-discovery
+        branch, so the documented call `--config site.optimizer.toml` dropped
+        every machine-specific path and then failed with a directory that
+        looked configured but was not. Found while verifying the image audit
+        against a real site, not by a test.
+        """
+        (self.root / config_module.CONFIG_NAMES[1]).write_text(LOCAL, encoding="utf-8")
+        cfg = config_module.load(path=self.root / config_module.CONFIG_NAMES[0],
+                                 workspace_root=self.root)
+        self.assertEqual(cfg.static_dir, Path("D:/sites/example/public"))
+        self.assertTrue(cfg.strict)
+
+    def test_explicitly_naming_the_local_file_is_not_double_applied(self):
+        """A complete local file is valid on its own, and merges only once."""
+        (self.root / config_module.CONFIG_NAMES[1]).write_text(LOCAL_COMPLETE, encoding="utf-8")
+        cfg = config_module.load(path=self.root / config_module.CONFIG_NAMES[1],
+                                 workspace_root=self.root)
+        self.assertEqual(cfg.static_dir, Path("D:/sites/example/public"))
+        self.assertEqual(cfg.site_url, "https://example.com")
+
+    def test_overlay_alone_is_rejected_because_it_is_not_a_config(self):
+        """The local file carries overrides, not a site identity."""
+        (self.root / config_module.CONFIG_NAMES[1]).write_text(LOCAL, encoding="utf-8")
+        with self.assertRaises(config_module.ConfigError):
+            config_module.load(path=self.root / config_module.CONFIG_NAMES[1],
+                               workspace_root=self.root)
+
+    def test_explicit_config_without_sibling_local_is_unchanged(self):
+        other = self.root / "elsewhere"
+        other.mkdir()
+        target = other / config_module.CONFIG_NAMES[0]
+        target.write_text(PORTABLE, encoding="utf-8")
+        cfg = config_module.load(path=target, workspace_root=self.root)
+        self.assertEqual(cfg.static_dir, self.root / "public")
 
     def test_missing_config_names_the_fix(self):
         empty = self.root / "empty"

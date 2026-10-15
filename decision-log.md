@@ -603,3 +603,50 @@ was structure plus a pointer to the authority.
 **Consequence:** unknown types are not flagged. `REQUIRED_FIELDS` holds only
 what a type cannot work without, not a completeness rubric — the vocabulary's
 opinion belongs to schema.org.
+---
+
+## D29 - The local config layer applies whenever the base file is named
+
+**Status:** accepted
+**Support level:** observed
+
+**Decision:** `--config site.optimizer.toml` loads `site.optimizer.local.toml`
+from the same directory if it exists. The explicit path names the base file, not
+a request to work without the overlay.
+
+**Reason:** the overlay was only merged in the auto-discovery branch. The
+documented call - which is what `AGENTS.md`, `PLAN.md` and `SKILL.md` all tell
+the reader to type - therefore dropped every machine-specific path and failed
+with `Static output directory not found: .../hugo-wizard/public`. The message
+named a directory that the configuration appeared to define and did not. A
+reader debugging this would have moved a directory that was already correct.
+
+**Consequence:** naming the local file explicitly is still safe; the merge is
+skipped when the two paths resolve to the same file. An overlay with no `[site]
+url` is rejected on its own, because it carries overrides and not an identity -
+that behaviour was already correct and is now pinned by a test.
+
+**Found by:** re-verifying the image capability against a real site. The four
+parity checks from round 2 all passed, and none of them touched the config
+layering, because they called the capability module directly.
+
+---
+
+## D30 - Coverage limits are documented next to the rule, not only in the plan
+
+**Status:** accepted
+**Support level:** observed
+
+**Decision:** a rule whose scope is narrower than its name suggests carries the
+limit in the capability README, with the measured size of what it misses.
+
+**Reason:** `image.loading_unset` fires only when no image on a page declares a
+strategy. That is defensible - a fold heuristic belongs to `performance.md` -
+but it is invisible in the output. A count of 19 on a site with 142 images
+without a `loading` attribute reads as clean, and 121 pages are mixed-declared
+and reported not at all.
+
+**Consequence:** a `loading_unset` count of zero means *"no page declares no
+strategy"*, never *"every image declares one"*. Reading a finding count as a
+statement about the site rather than about the rule is the failure mode this
+entry exists to prevent.

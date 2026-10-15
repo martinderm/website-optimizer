@@ -27,7 +27,7 @@ Not started: live page rendering via `playwright-cli` (round 5) and housekeeping
 — refreshing the workspace pins and the catalog entry (round 6).
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
-**[decision-log.md](decision-log.md)** carries decisions D1–D28 with their
+**[decision-log.md](decision-log.md)** carries decisions D1–D30 with their
 support level and evidence anchors.
 
 ## Repository layout
@@ -50,9 +50,18 @@ against the tools they replaced:
 | `redirects` matches the original | 53 live rules, 0 lost, 0 invented |
 | Reports conform to the house schema | receipt validated against `data-zone-artifact.schema.json` |
 | `schema` finds real defects | it found a `sameAs` inconsistency across 171 vs 2 pages |
+| `images` counts correctly | every rule re-counted independently; 469/469 exact |
 
-The 469 critical image findings are the tool's claim and have **not** been
-hand-verified.
+The image counts were re-derived from the built output with a separate parser,
+rule by rule, rather than by re-reading the tool's own numbers. Two apparent
+disagreements both resolved in the tool's favour — `photo.webp.jpg` is `.jpg`,
+and HEIC is not a modern format — so the tool was right and the check was
+weaker in both cases.
+
+That exercise also produced a known coverage gap: `image.loading_unset` fires
+only when *no* image on a page declares a strategy, so 121 pages with a mixed
+declaration are reported clean. See the limits section in
+`capabilities/images/README.md`.
 
 ## Scope boundary
 

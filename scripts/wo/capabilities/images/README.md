@@ -44,7 +44,23 @@ and no single-page view can see it.
 
 - `loading` strategy cannot be judged statically: whether an image is above the
   fold needs a layout, so only a wholly undeclared strategy is reported.
+- **A partially declared strategy is not reported at all.** The rule fires when
+  *no* image on the page declares one, so a page whose hero is `loading=eager`
+  and whose second image declares nothing produces zero findings — even though
+  that second image will be fetched eagerly whether or not it is in the
+  viewport. On the reference site this is 121 pages with a mixed declaration
+  and no finding.
+
+  This is a deliberate scope, not an oversight, and it is recorded here because
+  the number looks smaller than the problem. Tightening it needs a fold
+  heuristic, which is the thing `performance.md` already owns; until that
+  exists, widening this rule would report images it cannot justify. Anyone
+  reading a `loading_unset` count of zero should read it as *"no page declares
+  no strategy"*, not *"every image declares one"*.
 - Image *weight* is not measured. That needs real network or file inspection and
   belongs to `performance.md`.
 - `<picture>` elements are not walked; their `<source>` children are invisible
   here. `srcset` on the `<img>` is what gets read.
+- `_extension()` takes the last extension only. A file named
+  `photo.webp.jpg` is classified `.jpg`, which is right, but a name like
+  `photo.jpg.webp` that does not exist in its real format would silently pass.

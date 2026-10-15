@@ -59,7 +59,7 @@ line says otherwise.
 website-optimizer/
 ├── SKILL.md                  router + source-of-truth table
 ├── PLAN.md                   this file
-├── decision-log.md           durable decisions D1–D28
+├── decision-log.md           durable decisions D1–D30
 ├── README.md
 ├── LICENSE                   MIT
 ├── references/               13 files
@@ -450,7 +450,7 @@ reports and baselines into the consuming workspace by design.
 |---|---|---|
 | `on-page` | done | parity vs. the original, 173 pages |
 | `redirects` | done | parity vs. the original, 53 live rules |
-| `images` | done | 173 pages; 469 critical dimension findings **not yet hand-verified** |
+| `images` | done | 173 pages; every rule re-counted independently, 469/469 exact |
 | `schema` | done | 173 blocks, 4 types; found a real `#artist` `sameAs` inconsistency |
 | `compare` | done | regression, improvement, check-change, site-change |
 | live crawl | **not started** | — |
@@ -463,15 +463,23 @@ Kept separate so a failing capability never blocked the map or the references.
 `playwright-cli` subprocess binding. On request only, never from a hook (D26).
 Crawl artifacts are written beside the run, not into it (D27).
 
-### Round 6 — housekeeping (not started)
+### Round 6 — housekeeping
 
-- Refresh `.agents/upstream.lock.json` and `AGENTS.md` in `hugo-wizard` to the
-  current skill commit; both still name an older one.
-- Rewrite the `skills-catalog.yaml` entry: its `summary` and `triggers` still
-  describe round 2, so `redirects`, `images`, `schema` and `compare` are
-  undiscoverable.
+- ~~Refresh `.agents/upstream.lock.json` and `AGENTS.md` in `hugo-wizard`~~ done.
+- ~~Rewrite the `skills-catalog.yaml` entry~~ done.
 - Delete `verify-redirects.py` once its remaining referrers are checked.
 - Decide on CI. Without it a parity check is a snapshot, not a guarantee.
+
+### Round 7 — open findings from verification
+
+Verifying the image capability against the built output (round 6) produced two
+items that were not on any list:
+
+- Fixed: `--config` silently dropped the local overlay, so the documented
+  invocation could not see a configured site at all. D29.
+- Documented, not fixed: `image.loading_unset` misses every page with a mixed
+  `loading` declaration — 121 pages on the reference site. Tightening it needs a
+  fold heuristic, which `performance.md` owns. D30.
 
 ---
 
