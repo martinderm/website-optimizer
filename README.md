@@ -12,12 +12,12 @@ It measures and advises. It does not build, host, or deploy.
 
 ## Status
 
-Round 2 of 4. The `on-page` capability works and produces append-only evidence
-runs; the reference set and the system map are still pending.
+Round 3b of 4. The `on-page` capability works and produces append-only evidence
+runs, the reference set is written, and `docs/system-map/` maps the tool
+contracts. Round 4 adds the remaining capabilities.
 
-**[PLAN.md](PLAN.md) is the design source of truth.** Do not cite this skill as
-a rule yet: `references/` does not exist, so the SEO rules still live in the
-consuming workspace's chore documents until their replacements land.
+**[PLAN.md](PLAN.md)** is the design source of truth, and
+**[decision-log.md](decision-log.md)** carries the decisions behind it.
 
 ## Repository layout
 

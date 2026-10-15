@@ -15,16 +15,21 @@ description: >-
 
 ## Status
 
-**Round 3a of 4 — references written, chore stubs next.**
+**Round 3b of 4 — references, tooling, and system map in place.**
 
-`references/` and `scripts/` are live. `docs/system-map/` does not exist yet.
+`references/`, `scripts/` and `docs/system-map/` all exist.
 
 `on-page` audits a static output directory and writes an append-only evidence
 run. The reference set carries the rules, each with a source and a support level;
 `sources.md` records which sources were actually read and which were inherited
 from a workspace document.
 
-Round 3b builds the system map. Round 4 adds the remaining capabilities.
+Before changing anything in `scripts/`, read
+[`docs/system-map/`](docs/system-map/README.md): it maps the tool contracts and
+says what a given change hits and what it does not.
+
+Round 4 adds the remaining capabilities: `redirects`, `images`, `schema`,
+`compare`, and live crawling.
 
 ## Quick start
 
