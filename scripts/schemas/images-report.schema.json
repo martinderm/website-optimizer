@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martinderm/website-optimizer/schemas/images-report.schema.json",
+  "title": "Image Audit Report",
+  "type": "object",
+  "allOf": [
+    {"$ref": "report-base.schema.json"},
+    {
+      "type": "object",
+      "required": ["source", "summary"],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "static_dir"},
+            "path": {"type": ["string", "null"]}
+          }
+        },
+        "summary": {
+          "type": "object",
+          "required": [
+            "audited_pages", "ignored_pages", "pages_with_images", "images_total",
+            "pages_with_findings", "total_critical_issues", "total_warnings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "audited_pages": {"type": "integer", "minLength": 0},
+            "ignored_pages": {"type": "integer", "minLength": 0},
+            "pages_with_images": {"type": "integer", "minLength": 0},
+            "images_total": {"type": "integer", "minLength": 0},
+            "pages_with_findings": {"type": "integer", "minLength": 0},
+            "total_critical_issues": {"type": "integer", "minLength": 0},
+            "total_warnings": {"type": "integer", "minLength": 0}
+          }
+        }
+      }
+    }
+  ]
+}

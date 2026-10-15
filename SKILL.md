@@ -15,7 +15,7 @@ description: >-
 
 ## Status
 
-**Round 4 in progress — two capabilities working.**
+**Round 4 — four capabilities working.**
 
 `on-page` audits a static output directory; `redirects` probes live redirect
 rules. Both write append-only evidence runs. The reference set is complete and
@@ -35,6 +35,8 @@ python scripts/wo.py init-site --site-url https://example.com
 python scripts/wo.py on-page              # static output, one evidence run
 python scripts/wo.py redirects             # live redirect rules
 python scripts/wo.py compare               # attribute what changed since the last run
+python scripts/wo.py images                # image delivery, dimensions, icons
+python scripts/wo.py schema                # JSON-LD structure and completeness
 python scripts/wo.py runs                 # list stored runs
 python scripts/wo.py on-page --dry-run    # audit, write nothing
 ```

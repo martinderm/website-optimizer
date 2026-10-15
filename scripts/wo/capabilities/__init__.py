@@ -29,6 +29,14 @@ REGISTRY = {
         "schema": "compare-report.schema.json",
         "meta": True,
     },
+    "images": {
+        "module": "wo.capabilities.images.audit",
+        "schema": "images-report.schema.json",
+    },
+    "schema": {
+        "module": "wo.capabilities.schema.audit",
+        "schema": "schema-report.schema.json",
+    },
 }
 
 META = {name for name, entry in REGISTRY.items() if entry.get("meta")}

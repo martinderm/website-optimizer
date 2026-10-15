@@ -19,6 +19,15 @@ from pathlib import Path
 
 OG_PROPERTIES = ("og:title", "og:description", "og:image", "og:url", "og:type", "og:locale")
 TWITTER_NAMES = ("twitter:card", "twitter:image")
+ICON_RELS = ("icon", "apple-touch-icon", "manifest", "mask-icon")
+
+
+def _int_or_none(value: str | None) -> int | None:
+    """Dimensions only count when the markup states a number, not a string."""
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
 
 
 @dataclass
@@ -41,6 +50,12 @@ class Page:
     images_total: int = 0
     images_missing_alt: int = 0
     schemas: list[str] = field(default_factory=list)
+    # Per-image delivery facts. `alt` is reduced to presence and length on
+    # purpose: the value itself is authored prose, and a report has no use for it.
+    images: list[dict] = field(default_factory=list)
+    # Declared icons, so the images capability can check whether the referenced
+    # files actually exist in the build output.
+    icons: list[dict] = field(default_factory=list)
 
     @property
     def description_length(self) -> int:
@@ -71,6 +86,13 @@ class _Extractor(HTMLParser):
         elif tag == "link":
             if attr.get("rel", "").lower() == "canonical":
                 self.page.canonical = attr.get("href", "").strip()
+            elif attr.get("rel", "").lower() in ICON_RELS:
+                self.page.icons.append({
+                    "rel": attr.get("rel", "").lower(),
+                    "href": attr.get("href", "").strip(),
+                    "sizes": attr.get("sizes", "").strip() or None,
+                    "type": attr.get("type", "").strip() or None,
+                })
         elif tag == "h1":
             self.page.h1_count += 1
         elif tag == "main":
@@ -81,8 +103,20 @@ class _Extractor(HTMLParser):
                 self.page.has_skip_link = True
         elif tag == "img":
             self.page.images_total += 1
-            if "alt" not in attr:
+            alt_present = "alt" in attr
+            if not alt_present:
                 self.page.images_missing_alt += 1
+            alt_value = attr.get("alt") or ""
+            self.page.images.append({
+                "src": attr.get("src", "").strip(),
+                "srcset": attr.get("srcset", "").strip() or None,
+                "sizes": attr.get("sizes", "").strip() or None,
+                "width": _int_or_none(attr.get("width")),
+                "height": _int_or_none(attr.get("height")),
+                "loading": (attr.get("loading") or "").strip().lower() or None,
+                "alt_present": alt_present,
+                "alt_length": len(alt_value),
+            })
         elif tag == "script":
             if attr.get("type", "").lower() == "application/ld+json":
                 self._in_json_ld = True

@@ -10,6 +10,8 @@
 - [audit-report](audit-report.md) - live / verified, 2026-10-15
 - [receipt](receipt.md) - live / verified, 2026-10-15
 - [reference-set](reference-set.md) - live / verified, 2026-10-15
+- [images](images.md) - live / verified, 2026-10-15
+- [schema](schema.md) - live / verified, 2026-10-15
 - [quality](quality.md) - live / verified, 2026-10-15
 
 Geplant, noch nicht implementiert — als `ghost` geführt, keine Karte:

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martinderm/website-optimizer/schemas/schema-report.schema.json",
+  "title": "Structured Data Audit Report",
+  "type": "object",
+  "allOf": [
+    {"$ref": "report-base.schema.json"},
+    {
+      "type": "object",
+      "required": ["source", "references", "summary"],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "static_dir"},
+            "path": {"type": ["string", "null"]}
+          }
+        },
+        "references": {
+          "type": "object",
+          "description": "Where the authority for this capability lives. This tool checks structure, not the vocabulary.",
+          "required": ["vocabulary", "validator", "rich_results"],
+          "additionalProperties": false,
+          "properties": {
+            "vocabulary": {"type": "string"},
+            "validator": {"type": "string"},
+            "rich_results": {"type": "string"}
+          }
+        },
+        "summary": {
+          "type": "object",
+          "required": [
+            "audited_pages", "ignored_pages", "jsonld_blocks", "types_found",
+            "pages_with_findings", "total_critical_issues", "total_warnings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "audited_pages": {"type": "integer", "minLength": 0},
+            "ignored_pages": {"type": "integer", "minLength": 0},
+            "jsonld_blocks": {"type": "integer", "minLength": 0},
+            "types_found": {"type": "array", "items": {"type": "string"}},
+            "pages_with_findings": {"type": "integer", "minLength": 0},
+            "total_critical_issues": {"type": "integer", "minLength": 0},
+            "total_warnings": {"type": "integer", "minLength": 0}
+          }
+        }
+      }
+    }
+  ]
+}

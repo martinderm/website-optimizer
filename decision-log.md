@@ -555,3 +555,44 @@ which `compare` reports rather than filters.
 
 **Support caveat:** partially supported until the capability exists and its
 runtime is measured on a real site.
+
+## D27 — Crawl artifacts are written beside the run, not into it
+
+**Date:** 2026-10-15
+**Status:** accepted
+**support_level:** fully_supported
+**references:**
+  - `agent-architecture/standards/workspace/workspace-memory-tiers-standard.md`
+
+When live rendering lands, the raw crawl output is written outside the evidence
+zone, next to the run rather than inside it. `memory/evidence/` holds one report
+and one receipt per run; bulk, regenerable crawl data is not knowledge and does
+not belong in an append-only history that humans read.
+
+**Reason:** mixing the two would put hundreds of megabytes of regenerable HTML
+into the folder a reviewer is meant to open, and every retention decision for
+evidence would then apply to data that can simply be crawled again.
+
+**Consequence:** the evidence zone stays small enough to read; a run folder keeps
+being `report.json` + `receipt.json` only.
+
+## D28 — `schema` checks structure, not the schema.org vocabulary
+
+**Date:** 2026-10-15
+**Status:** accepted
+**support_level:** fully_supported
+**references:** `https://schema.org/docs/full.html`
+
+`schema` validates JSON-LD structure and completeness locally — parses, `@type`
+present, required fields present, `@context` declared, `@id` consistent — and
+hands vocabulary validation to schema.org's validator and Google's Rich Results
+Test. The report carries those references in its own `references` block.
+
+**Reason:** the vocabulary is tens of thousands of terms with subclass
+hierarchies. Fetching it would make a build-directory check network-dependent;
+vendoring it would create a second copy that ages silently. The approved scope
+was structure plus a pointer to the authority.
+
+**Consequence:** unknown types are not flagged. `REQUIRED_FIELDS` holds only
+what a type cannot work without, not a completeness rubric — the vocabulary's
+opinion belongs to schema.org.

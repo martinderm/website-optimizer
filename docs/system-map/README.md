@@ -12,6 +12,8 @@ ICM Form 6; Karte des Werkzeug-Subsystems. Einstieg für Änderungen, keine zwei
 | Was aus HTML extrahiert wird — und was nicht | [Page](objects/page.md) |
 | Die zehn On-Page-Regeln | [On-Page](objects/on-page.md) |
 | Live-Prüfung der Redirect-Regeln | [Redirects](objects/redirects.md) |
+| Bildauslieferung, Dimensionen, Formate, Icons | [Images](objects/images.md) |
+| JSON-LD-Struktur und Vollständigkeit | [Schema](objects/schema.md) |
 | Regelwerk, Quellen, Verbindlichkeit | [Referenzsatz](objects/reference-set.md) |
 | Tests, Parität gegen das Vorgängerskript | [Qualität](objects/quality.md) |
 | Tatsächliche Abläufe | [Prozesse](processes/CONTEXT.md) |
