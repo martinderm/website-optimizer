@@ -18,8 +18,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
-from ...page import Page, extract_page, iter_html_files
+from ... import pages as pages_module
+from ...page import Page
 from ...report import TOOL_NAME, TOOL_VERSION
+
+# Re-exported. Path resolution now lives in `wo.pages` because three
+# capabilities need it and one copy is the only way it stays one rule. Kept
+# importable from here because the parity tests reach for it by this name, and
+# moving a function should not silently break a caller that never changed.
+find_static_dir = pages_module.find_static_dir
 
 CRITICAL = "critical"
 WARNING = "warning"
@@ -210,43 +217,24 @@ def audit_page(page: Page, site_url: str, ignore_noindex: bool = False) -> list[
 
 # --- directory audit -------------------------------------------------------
 
-def find_static_dir(path: Path) -> Path:
-    """Resolve `public/`, a bare HTML directory, or the path as given."""
-    resolved = Path(path).resolve()
-    if (resolved / "public").is_dir():
-        return resolved / "public"
-    if resolved.is_dir() and any(resolved.glob("*.html")):
-        return resolved
-    return resolved
+def run(config, ignore_noindex: bool = False, live: bool = False,
+        run: str | None = None) -> dict[str, Any]:
+    """Audit a site and return a report document.
 
-
-def run(config, ignore_noindex: bool = False, pages: list[Path] | None = None) -> dict[str, Any]:
-    """Audit a static output directory and return a report document."""
-    target = find_static_dir(config.static_dir)
-    if not target.exists():
-        raise FileNotFoundError(
-            f"Static output directory not found: {target}\n"
-            f"Set [site] static_dir in site.optimizer.toml, or build the site first."
-        )
-
-    pattern = re.compile(config.ignore_path) if config.ignore_path else None
-    html_files = pages if pages is not None else list(iter_html_files(target))
+    Static build output by default, rendered pages with `live=True`. Both arrive
+    here as `Page` objects, so every rule above is written once and behaves
+    identically on either source. A rule that only worked on files would have
+    been a rule about the build, not about the site.
+    """
+    page_set = pages_module.resolve(config, live=live, run=run)
 
     findings: list[dict] = []
     page_records: list[dict] = []
-    audited = 0
-    ignored = 0
 
-    for file_path in html_files:
-        rel = Path(file_path).relative_to(target).as_posix()
-        if pattern and pattern.search(rel):
-            ignored += 1
-            continue
-        audited += 1
-        page = extract_page(file_path, source_label=rel)
+    for page in page_set.pages:
         findings += audit_page(page, config.site_url, ignore_noindex)
         page_records.append({
-            "source": rel,
+            "source": page.source,
             "title": page.title,
             "canonical": page.canonical,
             "description_length": page.description_length,
@@ -257,20 +245,21 @@ def run(config, ignore_noindex: bool = False, pages: list[Path] | None = None) -
 
     critical = sum(1 for f in findings if f["severity"] == CRITICAL)
     pages_with_findings = len({f["subject"] for f in findings})
+    audited = len(page_set.pages)
 
-    return {
+    report = {
         "report_version": REPORT_VERSION,
         "tool": {"name": TOOL_NAME, "version": TOOL_VERSION},
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "crawl_mode": config.crawl_mode,
+        "crawl_mode": page_set.mode,
         "site": {"url": config.site_url, "domain": config.domain},
         "capability": "on-page",
-        "source": {"kind": "static_dir", "path": _relative(target, config.workspace_root)},
+        "source": page_set.source,
         "rules_run": list(CHECKS),
         "summary": {
-            "total_html_files": len(html_files),
+            "total_html_files": audited,
             "audited_pages": audited,
-            "ignored_pages": ignored,
+            "ignored_pages": page_set.ignored,
             "clean_pages": audited - pages_with_findings,
             "pages_with_findings": pages_with_findings,
             "total_critical_issues": critical,
@@ -279,11 +268,6 @@ def run(config, ignore_noindex: bool = False, pages: list[Path] | None = None) -
         "pages": page_records,
         "findings": findings,
     }
-
-
-def _relative(path: Path, root: Path) -> str:
-    """Store workspace-relative paths so a report never leaks a local layout."""
-    try:
-        return Path(path).resolve().relative_to(Path(root).resolve()).as_posix()
-    except ValueError:
-        return Path(path).name
+    if page_set.crawl is not None:
+        report["crawl"] = page_set.crawl
+    return report

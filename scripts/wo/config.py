@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import tomllib
 
+from .crawl import crawl_settings
 from .errors import ConfigError
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -47,6 +48,10 @@ class SiteConfig:
         "check_target": True,
         "timeout": 10,
     })
+    # D26: live rendering is opt-in per run, never a default. The block exists
+    # so a workspace can declare its sitemap and limits once, but nothing reads
+    # it unless --live was passed.
+    crawl: dict = field(default_factory=lambda: crawl_settings({}))
 
     @property
     def classification(self) -> str:
@@ -159,6 +164,7 @@ def load(path: Path | None = None, workspace_root: Path | None = None) -> SiteCo
         retention_class=str(audit.get("retention_class", "audit-run")),
         capabilities=list(audit.get("capabilities", ["on-page"])),
         redirects=_redirect_settings(data),
+        crawl=crawl_settings(data),
     )
 
 

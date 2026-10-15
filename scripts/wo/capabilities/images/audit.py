@@ -17,7 +17,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ...page import Page, extract_page, iter_html_files
+from ... import pages
+from ...page import Page
 from ...report import TOOL_NAME, TOOL_VERSION
 
 CRITICAL = "critical"
@@ -230,57 +231,43 @@ def audit_page(page: Page, root: Path | None = None) -> list[dict]:
     return findings
 
 
-def find_static_dir(path: Path) -> Path:
-    resolved = Path(path).resolve()
-    if (resolved / "public").is_dir():
-        return resolved / "public"
-    if resolved.is_dir() and any(resolved.glob("*.html")):
-        return resolved
-    return resolved
+def run(config, live: bool = False, run: str | None = None, **_) -> dict[str, Any]:
+    page_set = pages.resolve(config, live=live, run=run)
+    # icon.file_missing compares a declared href against files in a build
+    # directory. A live crawl has no directory, so the rule cannot run and says
+    # so rather than passing vacuously — a rule that cannot fire must not be
+    # reported as a rule that found nothing.
+    root = Path(config.static_dir) if page_set.mode == "static" else None
+    active_checks = list(CHECKS) if root is not None else [
+        c for c in CHECKS if c != "icon.file_missing"
+    ]
 
-
-def run(config, **_) -> dict[str, Any]:
-    target = find_static_dir(config.static_dir)
-    if not target.exists():
-        raise FileNotFoundError(
-            f"Static output directory not found: {target}\n"
-            f"Set [site] static_dir in site.optimizer.toml, or build the site first."
-        )
-
-    pattern = re.compile(config.ignore_path) if config.ignore_path else None
     findings: list[dict] = []
-    audited = 0
-    ignored = 0
-    images_total = 0
     pages_with_images = 0
+    images_total = 0
 
-    for file_path in iter_html_files(target):
-        rel = Path(file_path).relative_to(target).as_posix()
-        if pattern and pattern.search(rel):
-            ignored += 1
-            continue
-        audited += 1
-        page = extract_page(file_path, source_label=rel)
+    for page in page_set.pages:
         if page.images:
             pages_with_images += 1
         images_total += len(page.images)
-        findings += audit_page(page, target)
+        findings += audit_page(page, root)
 
     critical = sum(1 for f in findings if f["severity"] == CRITICAL)
     subjects = {f["subject"] for f in findings}
+    audited = len(page_set.pages)
 
-    return {
+    report = {
         "report_version": REPORT_VERSION,
         "tool": {"name": TOOL_NAME, "version": TOOL_VERSION},
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "crawl_mode": "static",
+        "crawl_mode": page_set.mode,
         "site": {"url": config.site_url, "domain": config.domain},
         "capability": "images",
-        "rules_run": list(CHECKS),
-        "source": {"kind": "static_dir", "path": _relative(target, config.workspace_root)},
+        "rules_run": active_checks,
+        "source": page_set.source,
         "summary": {
             "audited_pages": audited,
-            "ignored_pages": ignored,
+            "ignored_pages": page_set.ignored,
             "pages_with_images": pages_with_images,
             "images_total": images_total,
             "pages_with_findings": len(subjects),
@@ -289,10 +276,6 @@ def run(config, **_) -> dict[str, Any]:
         },
         "findings": findings,
     }
-
-
-def _relative(path: Path, root: Path) -> str:
-    try:
-        return Path(path).resolve().relative_to(Path(root).resolve()).as_posix()
-    except ValueError:
-        return Path(path).name
+    if page_set.crawl is not None:
+        report["crawl"] = page_set.crawl
+    return report

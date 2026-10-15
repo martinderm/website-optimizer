@@ -30,3 +30,14 @@ class MappingError(CapabilityError):
 
 class CompareError(CapabilityError):
     kind = "NothingToCompare"
+
+
+class CrawlError(CapabilityError):
+    """A live crawl could not run.
+
+    Separate from the other kinds because the fix is different: not a config
+    value, but a missing browser, an unreachable host, or a page that never
+    finished rendering. Each of those gets its own message from the crawl module.
+    """
+
+    kind = "CrawlError"

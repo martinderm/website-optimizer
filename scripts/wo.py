@@ -87,6 +87,17 @@ def _run_capability(name: str, args) -> dict:
             "baseline": getattr(args, "baseline", None),
             "current": getattr(args, "current", None),
         })
+    else:
+        # The run id is fixed *before* the capability runs, not when the report
+        # is written. A live crawl writes its raw HTML while it works, so an id
+        # chosen afterwards would put those artifacts in a folder with no
+        # relation to the run they belong to (D27). Resolving it here means the
+        # crawl folder and the run folder carry the same name.
+        run_id = getattr(args, "run", None) or report_module.run_id()
+        kwargs.update({
+            "live": getattr(args, "live", False),
+            "run": run_id,
+        })
     try:
         result = module.run(cfg, **kwargs)
     except CapabilityError as exc:
@@ -109,7 +120,11 @@ def _run_capability(name: str, args) -> dict:
     written = None
     if not args.dry_run:
         filename = "comparison.json" if name == "compare" else "report.json"
-        written = report_module.write_run(cfg, result, run=args.run, filename=filename)
+        written = report_module.write_run(
+            cfg, result,
+            run=run_id if name != "compare" else getattr(args, "run", None),
+            filename=filename,
+        )
 
     # Only the two severity counters are capability-neutral. Earlier versions of
     # this message hard-coded `audited_pages`, which only exists in the on-page
@@ -121,7 +136,15 @@ def _run_capability(name: str, args) -> dict:
         message,
         data={"summary": summary, "findings": result["findings"],
               "run": written["run_dir"].name if written else None,
-              "paths": {k: str(v) for k, v in written.items()} if written else None},
+              "paths": {k: str(v) for k, v in written.items()} if written else None,
+              # A live run's reach is part of its result. Without it in the
+              # envelope, "0 findings" from 3 fetched pages is indistinguishable
+              # from "0 findings" from 400 — and the first one is a statement
+              # about the crawl, not about the site.
+              "crawl": result.get("crawl"),
+              "crawl_mode": result.get("crawl_mode"),
+              "rules_run": result.get("rules_run"),
+              },
     )
 
 
@@ -193,6 +216,12 @@ def main(argv=None) -> int:
                          help="Do not report pages marked noindex (on-page)")
         cap.add_argument("--run", help="Explicit run id (default: UTC timestamp)")
         cap.add_argument("--dry-run", action="store_true", help="Audit without writing a run")
+        if capability != "compare":
+            # D26: rendering is opt-in per invocation. There is deliberately no
+            # config switch and no hook path - a crawl costs minutes, shares a
+            # browser session, and depends on consent state.
+            cap.add_argument("--live", action="store_true",
+                             help="Render pages in a browser instead of reading build output")
         if capability == "compare":
             cap.add_argument("--baseline", help="Baseline run id (default: the previous run)")
             cap.add_argument("--current", help="Run id to compare against the baseline")

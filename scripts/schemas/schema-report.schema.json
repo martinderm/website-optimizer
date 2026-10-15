@@ -14,7 +14,7 @@
           "required": ["kind"],
           "additionalProperties": false,
           "properties": {
-            "kind": {"const": "static_dir"},
+            "kind": {"enum": ["static_dir", "live_render"]},
             "path": {"type": ["string", "null"]}
           }
         },

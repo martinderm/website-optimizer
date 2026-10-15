@@ -24,6 +24,31 @@
     },
     "generated_at": {"type": "string", "minLength": 1},
     "crawl_mode": {"enum": ["static", "live"]},
+    "crawl": {
+      "type": "object",
+      "description": "Present only for a live render. Carries what the crawl could and could not reach, so a run that saw half the site never reads as one that saw all of it.",
+      "required": ["requested", "fetched", "failed", "limit", "retention_class"],
+      "additionalProperties": false,
+      "properties": {
+        "requested": {"type": "integer", "minimum": 0},
+        "fetched": {"type": "integer", "minimum": 0},
+        "limit": {"type": "integer", "minimum": 0},
+        "retention_class": {"const": "crawl-ephemeral"},
+        "artifacts": {"type": ["string", "null"]},
+        "failed": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["url", "reason"],
+            "additionalProperties": false,
+            "properties": {
+              "url": {"type": "string", "minLength": 1},
+              "reason": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
     "site": {
       "type": "object",
       "required": ["url", "domain"],

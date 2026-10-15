@@ -185,16 +185,32 @@ def _collect_types(node, sink: list[str]) -> None:
             _collect_types(item, sink)
 
 
+def extract_page_from_html(html: str, source_label: str = "", is_404: bool = False) -> Page:
+    """Extract audit fields from an HTML string.
+
+    The entry point for a live crawl. Rendering a page and reading a file are
+    the same question asked of two different sources, so they converge here
+    rather than in each capability: a capability written against `Page` cannot
+    tell where the markup came from, and cannot accidentally grow a rule that
+    only works on one of them.
+    """
+    parser = _Extractor()
+    parser.feed(html)
+    page = parser.finish()
+    page.source = source_label
+    page.is_404 = is_404
+    return page
+
+
 def extract_page(file_path: Path, source_label: str | None = None) -> Page:
     """Extract audit fields from one HTML file."""
     file_path = Path(file_path)
     content = file_path.read_text(encoding="utf-8", errors="replace")
-
-    parser = _Extractor()
-    parser.feed(content)
-    page = parser.finish()
-    page.source = source_label if source_label is not None else file_path.name
-    page.is_404 = file_path.name == "404.html"
+    page = extract_page_from_html(
+        content,
+        source_label=source_label if source_label is not None else file_path.name,
+        is_404=file_path.name == "404.html",
+    )
     return page
 
 

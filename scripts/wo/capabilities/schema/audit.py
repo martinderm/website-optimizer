@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ... import pages as pages_module
 from ...report import TOOL_NAME, TOOL_VERSION
 
 CRITICAL = "critical"
@@ -238,56 +239,113 @@ def _duplicate_identifiers(pairs: list[tuple[str, str, str]]) -> list[dict]:
     return findings
 
 
-def find_static_dir(path: Path) -> Path:
-    resolved = Path(path).resolve()
-    if (resolved / "public").is_dir():
-        return resolved / "public"
-    if resolved.is_dir() and any(resolved.glob("*.html")):
-        return resolved
-    return resolved
+def audit_markup(content: str, relative: str) -> tuple[list[dict], list[str], list[tuple], int]:
+    """Audit JSON-LD in one document, given its markup.
+
+    Takes the markup rather than a path so that a live crawl and a build
+    directory reach the same rules. JSON-LD is a document rather than a field, so
+    unlike the other capabilities this one cannot work from extracted fields —
+    which is why it asks for the source text explicitly.
+    """
+    blocks = iter_blocks(content)
+
+    findings: list[dict] = []
+    types_found: list[str] = []
+    identifiers: list[tuple[str, str, str]] = []
+
+    if not blocks:
+        findings.append(_finding(
+            "schema.none", WARNING, "Page has no JSON-LD block", 0, ">= 1",
+            relative, "head > script[type=application/ld+json]"))
+        return findings, types_found, identifiers, 0
+
+    for index, raw in enumerate(blocks):
+        location = f"head > script[ld+json]:{index}"
+        if not raw:
+            findings.append(_finding(
+                "schema.block_empty", CRITICAL, "JSON-LD block is empty",
+                None, "a JSON object", relative, location))
+            continue
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            findings.append(_finding(
+                "schema.block_invalid_json", CRITICAL,
+                f"JSON-LD block does not parse: {exc.msg} at line {exc.lineno}",
+                exc.msg, "valid JSON", relative, location))
+            continue
+
+        nodes = _nodes(data)
+        if not nodes:
+            findings.append(_finding(
+                "schema.block_no_types", WARNING,
+                "JSON-LD block declares no @type",
+                0, ">= 1 node with @type", relative, location))
+            continue
+
+        # @context is declared once on the block. A node inside a @graph inherits
+        # it, so checking the node itself would report every graph member as
+        # missing a context — which is exactly what a correct @graph looks like.
+        block_has_context = _declares_context(data)
+        for node in nodes:
+            findings += _audit_node(node, relative, location, block_has_context)
+            types_found.extend(_type_names(node))
+            if isinstance(node.get("@id"), str):
+                identifiers.append(
+                    (node["@id"], relative, json.dumps(node, sort_keys=True))
+                )
+
+    return findings, types_found, identifiers, len(blocks)
 
 
-def run(config, **_) -> dict[str, Any]:
-    target = find_static_dir(config.static_dir)
-    if not target.exists():
-        raise FileNotFoundError(
-            f"Static output directory not found: {target}\n"
-            f"Set [site] static_dir in site.optimizer.toml, or build the site first."
-        )
+def audit_page(page_path: Path, relative: str) -> tuple[list[dict], list[str], list[tuple], int]:
+    """Return (findings, type names, (id, page, payload) tuples, block count)."""
+    return audit_markup(page_path.read_text(encoding="utf-8", errors="replace"), relative)
 
-    pattern = re.compile(config.ignore_path) if config.ignore_path else None
+
+def run(config, live: bool = False, run: str | None = None, **_) -> dict[str, Any]:
+    page_set = pages_module.resolve(config, live=live, run=run)
+    target = pages_module.find_static_dir(config.static_dir)
+
     findings: list[dict] = []
     all_types: set[str] = set()
     identifier_pages: list[tuple[str, str]] = []
     blocks_total = 0
-    audited = 0
-    ignored = 0
 
-    for file_path in sorted(target.rglob("*.html")):
-        relative = file_path.relative_to(target).as_posix()
-        if pattern and pattern.search(relative):
-            ignored += 1
-            continue
-        audited += 1
-        page_findings, page_types, ids_payload, blocks = audit_page(file_path, relative)
-        findings += page_findings
-        all_types.update(page_types)
-        blocks_total += blocks
-        identifier_pages += ids_payload
+    if page_set.mode == "live":
+        for page in page_set.pages:
+            markup = page_set.raw.get(page.source, "")
+            page_findings, page_types, ids_payload, blocks = audit_markup(markup, page.source)
+            findings += page_findings
+            all_types.update(page_types)
+            blocks_total += blocks
+            identifier_pages += ids_payload
+    else:
+        pattern = re.compile(config.ignore_path) if config.ignore_path else None
+        for file_path in sorted(target.rglob("*.html")):
+            relative = file_path.relative_to(target).as_posix()
+            if pattern and pattern.search(relative):
+                continue
+            page_findings, page_types, ids_payload, blocks = audit_page(file_path, relative)
+            findings += page_findings
+            all_types.update(page_types)
+            blocks_total += blocks
+            identifier_pages += ids_payload
 
     findings += _audit_site(sorted(all_types))
     findings += _duplicate_identifiers(identifier_pages)
 
     critical = sum(1 for f in findings if f["severity"] == CRITICAL)
-    return {
+    audited = len(page_set.pages)
+    report = {
         "report_version": REPORT_VERSION,
         "tool": {"name": TOOL_NAME, "version": TOOL_VERSION},
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "crawl_mode": "static",
+        "crawl_mode": page_set.mode,
         "site": {"url": config.site_url, "domain": config.domain},
         "capability": "schema",
         "rules_run": list(CHECKS),
-        "source": {"kind": "static_dir", "path": _relative(target, config.workspace_root)},
+        "source": page_set.source,
         "references": {
             "vocabulary": VOCABULARY_REFERENCE,
             "validator": VALIDATOR_REFERENCE,
@@ -295,7 +353,7 @@ def run(config, **_) -> dict[str, Any]:
         },
         "summary": {
             "audited_pages": audited,
-            "ignored_pages": ignored,
+            "ignored_pages": page_set.ignored,
             "jsonld_blocks": blocks_total,
             "types_found": sorted(all_types),
             "pages_with_findings": len({f["subject"] for f in findings}),
@@ -304,6 +362,9 @@ def run(config, **_) -> dict[str, Any]:
         },
         "findings": findings,
     }
+    if page_set.crawl is not None:
+        report["crawl"] = page_set.crawl
+    return report
 
 
 CHECKS: tuple[str, ...] = (

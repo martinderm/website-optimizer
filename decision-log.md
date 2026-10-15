@@ -679,3 +679,111 @@ as an image.
 
 **Consequence:** the critical count for that site is 329, not 469. Both numbers
 were correct for the rules as written; only one describes the site.
+
+---
+
+## D32 - A crawl is checked against what it saw, before its findings are read
+
+**Status:** accepted
+**Support level:** observed
+
+**Decision:** every live report carries a `crawl` block — requested, fetched,
+failed, limit, artifacts, retention class — and the envelope repeats it. The
+first time a live run reported `0 findings`, that number was meaningless: it
+could have meant 400 clean pages or 3 pages and a timeout. The reach of a run is
+part of its result.
+
+**Reason:** the finding count answers "what is wrong", never "how much did you
+look at". A run that fetched three pages of four hundred and reported nothing
+is indistinguishable, in the output, from a clean site. That is the failure this
+prevents, and it is the same one `rules_run` prevents from the other side.
+
+**Consequence:** `compare` can attribute a difference between a static and a live
+run, because it knows both were looking at something. D25 made provenance a
+qualifier rather than a filter; this is what makes the qualifier available.
+
+---
+
+## D33 - The live path is the same code path
+
+**Status:** accepted
+**Support level:** observed
+
+**Decision:** capabilities have no `--live` branch. `wo.pages.resolve()` returns
+`Page` objects from either source and the rules above it cannot tell them apart.
+JSON-LD is the one exception and it is explicit: `PageSet.raw` carries rendered
+markup for capabilities that need the document rather than the fields.
+
+**Reason:** a duplicated code path is a place for the two versions to disagree,
+and the disagreement would be invisible until a site produced different findings
+for the same defect depending on how it was audited. Verified against 25 real
+pages: static and live agree exactly, on all three capabilities.
+
+**Consequence:** `extract_page_from_html` is the only new extraction entry point,
+and a rule that would only work on files cannot be written without deliberately
+reaching past the interface.
+
+---
+
+## D34 - A crawl that sees one page repeatedly reports nothing
+
+**Status:** accepted
+**Support level:** partially_supported
+
+**Decision:** if most rendered pages are byte-identical, the audit raises and
+produces no findings. Two pages are never enough evidence to refuse; a majority
+repetition is.
+
+**Reason:** D26 named this failure — a consent wall is found on every page and
+reported as that page's content, consistently wrong in a way that looks real.
+Making it mechanical matters more than documenting it, because the wrong report
+is more convincing than the caveat.
+
+**Why identical markup and not "a dialog is present":** the honest signature is
+that distinct URLs cannot return the same document. Consent markers
+(`consent`, `onetrust`, `cookieyes`, ...) sharpen the message but never decide
+it — plenty of real pages carry those words, and a JavaScript shell behind the
+same behaviour produces the same unusable result with no marker at all.
+
+**Not yet supported:** the guard does not know *why* pages repeat. A site that
+redirects every URL to one page is not behind a consent wall and will still be
+refused. The message says so rather than naming a cause it cannot establish.
+
+---
+
+## D35 - Rendered HTML is decoded as UTF-8, not as the terminal speaks
+
+**Status:** accepted
+**Support level:** observed
+
+**Decision:** the crawl reads subprocess output as bytes and decodes UTF-8 with
+`errors="replace"`.
+
+**Reason:** `text=True` decodes with the machine's locale code page. On a German
+Windows install that is cp1252, and the first rendered page containing a
+character outside it raised `UnicodeDecodeError` inside a reader thread and took
+the process down with a traceback. A tool whose input is arbitrary web pages
+cannot inherit the terminal's encoding — the page is not written in the
+operator's language.
+
+**Found by:** the first real crawl of a real site. No test could have caught it,
+because a fixture containing only ASCII decodes under any code page.
+
+---
+
+## D36 - The browser CLI is invoked without a shell where possible
+
+**Status:** accepted
+**Support level:** observed
+
+**Decision:** the npm `.CMD` shim is parsed for its node entry point and that JS
+file is executed with `node` directly. `cmd.exe` is the last resort, not the
+first.
+
+**Reason:** `subprocess` cannot execute a `.CMD` without a shell, and a shell is
+actively wrong for URLs — `playwright-cli`'s own documentation calls out that a
+URL containing `&` gets split by `cmd.exe` before the browser sees it. Going
+through node removes an entire quoting layer rather than escaping it.
+
+**Consequence:** `[crawl] cli_path` exists as an escape hatch for an
+installation this resolution cannot see, rather than as the normal path.
