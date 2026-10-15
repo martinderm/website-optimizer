@@ -32,7 +32,7 @@ This file is the only source of truth until the referenced files exist.
 One skill that answers: *is this website good enough to be found, and is it good
 enough once found?* It measures and advises. It does not build, host, or deploy.
 
-The material exists today as nine scattered chore documents in
+The material used to exist as nine scattered chore documents in
 `hugo-wizard/memory/references/chores/`, with the same three facts restated in
 two or three places each:
 
@@ -43,71 +43,81 @@ two or three places each:
 | First External Link principle | 3 |
 | `python scripts/audit-site-seo.py` invocation | 3, in three different forms |
 
-That is the problem this skill solves: not missing knowledge, but knowledge in
-three places with no owner.
+That was the problem this skill solves: not missing knowledge, but knowledge in
+three places with no owner. Six of the nine documents are now stubs pointing
+here; `post-migration-seo-checklist.md` deliberately stays as a migration
+runbook, and `mobile-optimierung-und-menue.md` stays with the `hugo` skill (D6).
 
 ---
 
 ## 2. Target structure
 
+Annotated with the state as of 2026-10-15. Everything listed exists unless a
+line says otherwise.
+
 ```
 website-optimizer/
-├── SKILL.md                  router + source-of-truth table (written)
+├── SKILL.md                  router + source-of-truth table
 ├── PLAN.md                   this file
-├── decision-log.md           durable decisions (written)
+├── decision-log.md           durable decisions D1–D28
 ├── README.md
 ├── LICENSE                   MIT
-├── references/               runde 3
-│   ├── seo-core.md           titles, descriptions, canonicals, snippets, internal linking
+├── references/               13 files
+│   ├── seo-core.md           titles, descriptions, canonicals, snippets, Open Graph
+│   ├── internal-linking.md   cornerstone content, anchor text, orphans, breadcrumbs
 │   ├── indexing.md           robots.txt, sitemap, noindex, GSC, Bing
-│   ├── redirects.md          301 chains, wildcards, URL lifecycle
+│   ├── redirects.md          301 chains, wildcards, URL lifecycle, archives
 │   ├── structured-data.md    JSON-LD, @graph, schema types, rich results
 │   ├── images.md             formats, srcset, dimensions, lazy, favicons, OG images
-│   ├── video.md              codec, poster, preload, transcript, VideoObject
+│   ├── video.md              codec, poster, preload, captions, VideoObject
 │   ├── performance.md        LCP/INP/CLS, fonts, budgets, caching
 │   ├── accessibility.md      semantics, keyboard, focus, contrast, responsive
 │   ├── llm-visibility.md     llms.txt, AI overviews, AI crawlers, extractable content
 │   ├── static-sites.md       Hugo robots layout, [sitemap], build-output audits
 │   ├── dynamic-sites.md      plugin SEO, WP-CLI, cache invalidation, archives
-│   └── sources.md            external provenance (Yoast, Google, MDN)
-├── scripts/                  runde 2
+│   └── sources.md            external provenance, consulted vs inherited
+├── scripts/
 │   ├── README.md
-│   ├── wo.py                 single entry point
+│   ├── wo.py                 single entry point; subparsers generated from REGISTRY
 │   ├── wo/
 │   │   ├── envelope.py       standard --json envelope
-│   │   ├── config.py         site.optimizer.yaml loader
-│   │   ├── report.py         report writer (atomic writes)
-│   │   ├── discovery.py      robots.txt / sitemap.xml / link graph
+│   │   ├── config.py         TOML loader, portable + local layers
+│   │   ├── errors.py         CapabilityError base
+│   │   ├── jsonschema.py     stdlib validator, $ref resolution
+│   │   ├── page.py           field extraction from HTML
+│   │   ├── report.py         run folders, atomic writes, data-zone receipts
 │   │   └── capabilities/
-│   │       ├── on-page/      ← first capability
-│   │       ├── redirects/
-│   │       ├── images/
-│   │       ├── schema/
-│   │       └── compare/
+│   │       ├── on_page/      ← static output: SEO + A11y on-page signals
+│   │       ├── redirects/    ← live: do redirect rules match reality
+│   │       ├── images/       ← static output: delivery, dimensions, icons
+│   │       ├── schema/       ← static output: JSON-LD structure and completeness
+│   │       └── compare/      ← meta: attribute differences between two runs
+│   │           └── (live-crawl capability: not implemented)
 │   ├── schemas/
-│   │   ├── envelope.schema.json
-│   │   └── audit-report.schema.json
-│   └── tests/
-└── docs/system-map/          runde 3, after capabilities exist
-    ├── CLAUDE.md  + byte-identical AGENTS.md + routing.md
+│   │   ├── report-base.schema.json        shared by every report
+│   │   ├── on-page-report.schema.json
+│   │   ├── redirects-report.schema.json
+│   │   ├── images-report.schema.json
+│   │   ├── schema-report.schema.json
+│   │   └── compare-report.schema.json
+│   └── tests/                104 stdlib unittest cases, incl. parity
+└── docs/system-map/          ICM Form 6
+    ├── README.md  + byte-identical AGENTS.md + routing.md
     ├── CONTEXT.md
-    ├── README.md
     ├── _meta/schema.md
     ├── _templates/{object,process}.md
-    ├── objects/
-    ├── processes/
+    ├── objects/              13 cards + CONTEXT.md + _index.md
+    ├── processes/            audit-static, compare-baseline
     └── effects/CONTEXT.md
 ```
 
-Rationale for the phase order is in section 8. The map is not scaffolded in
-round 1: an empty map folder is a documented failure mode, and object cards
-without a working tool to cite would be cards with no citations.
+Rationale for the phase order is in section 8.
 
 ---
 
 ## 3. Router
 
-In `SKILL.md`, ~15 rows. One row per question, one target file. The router never
+In `SKILL.md`, 15 rows. One row per question, one target file. The router never
 carries content — if a rule has to be read in the router to be applied, the rule
 is in the wrong file.
 
@@ -123,28 +133,41 @@ skills this one must not shadow: `hugo` (building), `caddy` (server),
 ### 4.1 Entry point
 
 ```
-python scripts/wo.py run-all --config site.optimizer.yaml
-python scripts/wo.py on-page --config site.optimizer.yaml --json
+python scripts/wo.py init-site --site-url https://example.com
+python scripts/wo.py on-page                 # static output
+python scripts/wo.py redirects                # live redirect rules
+python scripts/wo.py images                   # image delivery and icons
+python scripts/wo.py schema                   # JSON-LD structure
+python scripts/wo.py compare                  # attribute changes between runs
+python scripts/wo.py runs                     # list stored runs
+python scripts/wo.py validate-report FILE    # validate against a capability schema
 ```
 
 One entry point only. Capability modules are packages, not directly executable
 scripts. Running `wo.py` puts `scripts/` on `sys.path`, so imports work without
-path manipulation (decision D2).
+path manipulation (D2). Subparsers are generated from `REGISTRY`, so registering
+a capability is the only step needed to expose it (D23).
 
 ### 4.2 Pipeline as code
 
-Folder numbering is a weak proxy for execution order. `run-all` executes
-discover → audit → compare, which makes the order real and testable:
+Folder numbering is a weak proxy for execution order, so the order is expressed
+by the registry and the entry point rather than by folder names. Each capability
+is invoked on its own and writes its own run; `compare` reads those runs.
 
 ```
 discover  → crawl inputs (static_dir or rendered site) → page set
 audit     → one capability per module → findings against schemas/
-compare   → current report vs. stored baseline → regressions
+compare   → current report vs. stored baseline → attributed differences
 ```
 
-Static and dynamic sites differ only in the first step: `crawl-static` reads
-generated output, `crawl-live` renders the same page interface. Every downstream
-capability is written against the page interface, not against a build directory.
+Static and dynamic sites differ only in the first step: a static crawl reads
+generated output, a live crawl would render the same page interface. Every
+downstream capability is written against the page interface, not against a build
+directory.
+
+**Built today:** `on-page`, `images` and `schema` all take the static path;
+`redirects` is live by nature and returns `crawl_mode: live`. The live *page*
+crawl is round 5. `compare` reads any two runs that share a capability.
 
 ### 4.3 The site workspace owns the run, in its declared data zones
 
@@ -212,16 +235,17 @@ already passes in a workspace that has both `memory/references/` and
 `memory/evidence/`. Early conformance is strictly closer to the standard, never
 further from it.
 
-**Config versioning.** `site.optimizer.yaml` is committed and carries only
+**Config versioning.** `site.optimizer.toml` is committed and carries only
 portable values: site URL, crawl limits, which capabilities run.
-Machine-specific paths live in untracked `site.optimizer.local.yaml`. A config
+Machine-specific paths live in untracked `site.optimizer.local.toml`. A config
 that mixes both cannot be committed without leaking one workstation's layout
-into every fork of the workspace.
+into every fork of the workspace. (Format is TOML, not YAML — D20.)
 
 ### 4.4 Reports conform to the data-zone artifact schema
 
-`schemas/audit-report.schema.json` defines the findings; the envelope is
-generated in `wo/envelope.py`, never built per tool.
+`schemas/report-base.schema.json` carries what every report needs; each capability
+adds its own schema via `allOf` (D23). The envelope is generated in
+`wo/envelope.py`, never built per tool.
 
 Each run additionally writes a `receipt.json` conforming to
 `agent-architecture/schemas/data-zone-artifact.schema.json`. Its field names are
@@ -241,11 +265,14 @@ the house vocabulary and are not to be reinvented:
 read by any tool that speaks the house schema. One vocabulary, checked by
 machinery that already exists, beats a private one that nothing checks.
 
-**Why it is load-bearing for `compare`:** a live crawl is not deterministic.
-Without recorded provenance, `compare` will diff a browser-rendered report
-against a static-build report and report differences that were never changes to
-the site. Baselines are comparable only when their provenance is comparable —
-which makes this a schema requirement, not a logging nicety.
+**Why it matters for `compare`:** a live crawl is not deterministic, so
+provenance must be recorded to tell a real change from rendering noise. It is
+reported as a qualifier on the comparison, never used as a filter (D25).
+
+Every report also carries `capability` and `rules_run` — every rule id the
+capability could emit, fired or not. Without `rules_run`, "the page is clean"
+and "this check did not run" are the same observation, and `compare` cannot tell
+a new rule from a broken page.
 
 ### 4.5 External tools are declared dependencies, not silent assumptions
 
@@ -332,32 +359,32 @@ interfaces updates this map in the same commit (per repo AGENTS.md).
 Reference integrity rule: copy, verify parity, then remove. Nothing is deleted
 before its consumers are updated.
 
-| Source (hugo-wizard) | Destination | Fate |
-|---|---|---|
-| `chores/seo-opengraph-schema-accessibility-checkliste.md` | `seo-core` + `structured-data` + `images` + `accessibility` | stub with `delegated_to:` |
-| `chores/seo-launch-und-content-leitfaden.md` | `seo-core` + `indexing` | stub; Yoast provenance → `references/sources.md` |
-| `chores/post-migration-seo-checklist.md` §3–§4 | distributed across references | §1–§2 and §5 **stay** as the WordPress→Hugo runbook |
-| `chores/add_favicon.md` | `images.md` | stub |
-| `chores/llm-lesbare-inhalte.md` | `llm-visibility.md` | stub |
-| `chores/add-llms-txt.md` | `llm-visibility.md` | stub |
-| `chores/mobile-optimierung-und-menue.md` | **stays** in `hugo` (D6) | no stub; only generalized parts mirrored |
-| `scripts/audit-site-seo.py` | `scripts/wo/capabilities/on-page/` | rewritten with `--json` |
-| `scripts/verify-redirects.py` | `scripts/wo/capabilities/redirects/` | rewritten with `--json` |
+| Source (hugo-wizard) | Destination | Fate | State |
+|---|---|---|---|
+| `chores/seo-opengraph-schema-accessibility-checkliste.md` | `seo-core` + `structured-data` + `images` + `accessibility` | stub with `delegated_to:` | done |
+| `chores/seo-launch-und-content-leitfaden.md` | `seo-core` + `indexing` | stub; Yoast provenance → `sources.md` | done |
+| `chores/post-migration-seo-checklist.md` §3–§4 | distributed across references | §1–§2 and §5 **stay** as the WordPress→Hugo runbook | done |
+| `chores/add_favicon.md` | `images.md` | stub | done |
+| `chores/llm-lesbare-inhalte.md` | `llm-visibility.md` | stub; content enriched before stubbing | done |
+| `chores/add-llms-txt.md` | `llm-visibility.md` | stub | done |
+| `chores/mobile-optimierung-und-menue.md` | **stays** in `hugo` (D6) | no stub; only generalized parts mirrored | done |
+| `scripts/audit-site-seo.py` | `capabilities/on_page/` | ported, parity verified on 173 pages, removed | done |
+| `scripts/verify-redirects.py` | `capabilities/redirects/` | ported, parity verified on 53 live rules | **kept until everything is migrated** |
 
 Remains in hugo-wizard by design: `memory/references/websites/<domain>.md` (site
 decisions) and `memory/evidence/` (execution records). Those are the evidence
 architecture's job, not the skill's.
 
-### 6.1 Known referrers to update before removal
+### 6.1 Referrer status
 
-- `hugo-wizard/scripts/README.md` — already has an uncommitted diff; not to be
-  touched without approval.
-- `memory/references/websites/*.md` — several files cite the robots.txt lesson
-  and the audit invocation.
-- `memory/evidence/websites/<domain>/*.md` — historical record, links
-  adjusted but content never rewritten.
-- `.agents/upstream.lock.json` and `AGENTS.md` pinned-skills list — entry added
-  once the skill has working capabilities, not before (D7).
+- `hugo-wizard/scripts/README.md` — updated to point at `wo.py on-page`; the
+  file also carries an unrelated pre-existing edit to the live-stack logging
+  line, which was committed alongside it.
+- `memory/references/websites/*.md` — no remaining references to either script.
+- `memory/evidence/websites/<domain>/*.md` — historical record, links adjusted
+  where they existed, content never rewritten.
+- `.agents/upstream.lock.json` and `AGENTS.md` — skill registered and pinned;
+  **the pinned commit is stale** and needs a pointer refresh.
 
 ---
 
@@ -374,57 +401,77 @@ architecture's job, not the skill's.
 
 ## 8. Phases
 
-### Round 1 — scaffold (current)
+### Round 1 — scaffold — **done**
 
 `SKILL.md`, `PLAN.md`, `decision-log.md`, `README.md`, `LICENSE`, `.gitignore`.
-No catalog entry, no git repository, no submodule (D7). Exit condition: the
-design is reviewed and the phase-2 scope is fixed.
+No catalog entry, no git repository, no submodule (D7).
 
-### Round 2 — one capability end to end
+### Round 2 — one capability end to end — **done**
 
-`scripts/` with `wo.py`, envelope, config loader, report writer, schemas, tests,
-and the single `on-page` capability, rebuilt from `audit-site-seo.py` with `--json`
-added. Parity check against the old script on a real `public/` directory before
-the old one is removed. The site workspace contract (4.3) is exercised here: one
-real site folder is created in `hugo-wizard` per its conventions, with a first
-baseline, so that `compare` has something to compare against on the next run.
+`wo.py`, envelope, config loader, report writer, schemas, tests, and the
+`on-page` capability rebuilt from `audit-site-seo.py` with `--json` added.
+Parity verified against the original on a real 173-page site: 0 findings lost,
+0 invented. First evidence run written into `hugo-wizard`'s Evidence zone, with a
+receipt validated against the real `data-zone-artifact.schema.json`.
 
-Exit conditions: `wo.py run-all` produces a schema-valid report; the migrated
-script agrees with the old one on a real site; baselines live in the workspace;
-`skills-catalog.yaml` has an entry and `validate-skills-catalog.py` passes; git
-repository and submodule are set up.
+Met: schema-valid reports, parity on real data, baselines in the workspace,
+catalog entry plus `validate-skills-catalog.py` passing, private GitHub repo and
+submodule set up.
 
-**The `hugo-wizard` chore stubs move to round 3a, not round 2.** An earlier
+**The `hugo-wizard` chore stubs moved to round 3a, not round 2.** An earlier
 version of this plan put them here; that was wrong. A stub replaces content with
-a pointer to a reference file, and the reference files do not exist until 3a.
-Writing the stubs first would leave six pointers at files that cannot be opened —
-named but not wired, which is the ghost case — and would delete working knowledge
-from `hugo-wizard` with nothing taking its place. Reference integrity is
+a pointer to a reference file, and the reference files did not exist yet. Writing
+the stubs first would have left six pointers at files that cannot be opened —
+named but not wired, the ghost case — and deleted working knowledge from
+`hugo-wizard` with nothing taking its place. Reference integrity is
 copy-verify-remove: a home is never removed before the new home exists.
 
-### Round 3a — references, then the chore stubs
+### Round 3a — references, then the chore stubs — **done**
 
-The reference set. As each topic file lands, the matching chore in
-`hugo-wizard` is verified against it, then reduced to a stub with
-`delegated_to: website-optimizer`. This is the only safe order: the pointer is
-created after its target, never before.
+Thirteen reference files, each with `evidence_level`, `support_level`, source
+anchors and a review date. As each topic file landed, the matching chore was
+verified against it and only then reduced to a stub. `llm-visibility.md` was
+enriched with the page-structure rules from `llm-lesbare-inhalte.md` *before*
+that chore was stubbed, so the stub could not drop content that had no home yet.
 
-### Round 3b — the system map
+### Round 3b — the system map — **done**
 
-`docs/system-map/`, built slice by slice — inventory, catalog, nouns, processes,
-change-impact, re-verify — with a human gate between slices. Object cards cite a
-working implementation, which is why the map comes after the references and after
-round 2's tool exists.
+`docs/system-map/` built slice by slice, with a human gate per slice. Thirteen
+object cards and two process cards, each citing `path:line` at the revision it
+describes and carrying first-order waterfalls. `AGENTS.md` and `routing.md` are
+byte-identical twins of `README.md` and are generated, never hand-edited.
 
-**Catalog blast radius is `workspace_scoped`, not `read_only`.** The skill
-writes reports and baselines into the consuming workspace by design. Round 1 had
-`read_only` in view only because no writes existed yet; section 4.3 settled it.
+**Catalog blast radius is `workspace_scoped`, not `read_only`.** The skill writes
+reports and baselines into the consuming workspace by design.
 
-### Round 4 — remaining capabilities
+### Round 4 — capabilities — **4 of 5 done**
 
-`redirects`, `images`, `schema`, `compare`, and live crawling via `playwright-cli`.
-Kept separate so that a failing capability never blocks the map or the
-references.
+| Capability | State | Verified by |
+|---|---|---|
+| `on-page` | done | parity vs. the original, 173 pages |
+| `redirects` | done | parity vs. the original, 53 live rules |
+| `images` | done | 173 pages; 469 critical dimension findings **not yet hand-verified** |
+| `schema` | done | 173 blocks, 4 types; found a real `#artist` `sameAs` inconsistency |
+| `compare` | done | regression, improvement, check-change, site-change |
+| live crawl | **not started** | — |
+
+Kept separate so a failing capability never blocked the map or the references.
+
+### Round 5 — live page rendering (not started)
+
+`page.py` extended to parse an HTML string rather than only a file, plus a
+`playwright-cli` subprocess binding. On request only, never from a hook (D26).
+Crawl artifacts are written beside the run, not into it (D27).
+
+### Round 6 — housekeeping (not started)
+
+- Refresh `.agents/upstream.lock.json` and `AGENTS.md` in `hugo-wizard` to the
+  current skill commit; both still name an older one.
+- Rewrite the `skills-catalog.yaml` entry: its `summary` and `triggers` still
+  describe round 2, so `redirects`, `images`, `schema` and `compare` are
+  undiscoverable.
+- Delete `verify-redirects.py` once its remaining referrers are checked.
+- Decide on CI. Without it a parity check is a snapshot, not a guarantee.
 
 ---
 

@@ -124,4 +124,5 @@ resolve per page with a global fallback.
 - [ ] Anchor texts describe their target
 
 Verify mechanically with `python scripts/wo.py on-page`; the rules are listed in
-`capabilities/on_page/README.md`.
+`scripts/wo/capabilities/on_page/README.md`. Structured data is checked by
+`wo.py schema`, image delivery by `wo.py images`.

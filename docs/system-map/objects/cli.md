@@ -10,7 +10,7 @@ revision: a2dda236b34e6222be84c6068d84203f340219a8
 
 # CLI
 
-Der einzige ausführbare Einstiegspunkt. Fünf Kommandos, ein Dispatch.
+Der einzige ausführbare Einstiegspunkt. Ein Dispatch, sieben Kommandos.
 
 ## Why this shape
 Zwei Einstiegspunkte driften auseinander, sobald sich das Argumentparsing
@@ -28,13 +28,24 @@ aus. Die Reihenfolge steht damit im Code und nicht in Ordnernamen.
 `cmd_on_page`, `:112` `cmd_run_all`, `:129` `cmd_runs`, `:138`
 `cmd_validate_report`, `:153` `main`.
 
-Kommandos: `init-site`, `on-page`, `run-all`, `runs`, `validate-report`.
-Gemeinsame Flags: `--config`, `--workspace`, `--json`. Audit-Kommandos zusätzlich
-`--strict`, `--ignore-noindex`, `--run`, `--dry-run`.
+Kommandos: `init-site`, `on-page`, `redirects`, `images`, `schema`, `compare`,
+`runs`, `validate-report`. Gemeinsame Flags: `--config`, `--workspace`, `--json`.
+Capability-Kommandos zusätzlich `--strict`, `--ignore-noindex`, `--run`,
+`--dry-run`; `compare` zusätzlich `--baseline` und `--current`.
+
+Subparser werden aus `REGISTRY` generiert, nicht hartkodiert: eine Capability zu
+registrieren ist damit der einzige nötige Schritt. Vor dieser Änderung konnte die
+CLI halb verdrahtet sein — was genau passiert ist.
+
+`META` kennzeichnet `compare` als Workspace-Operation statt Site-Audit; sie wird
+nicht pro Site aktiviert, weil das ändern würde, was das Werkzeug kann, nicht was
+die Site ist.
 
 Exit-Codes: `0` Erfolg, `1` nur bei `--strict` mit kritischem Befund, `2` wenn
 `success` falsch ist. Fehlerpfade liefern eine selbstkorrigierende Meldung im
-Envelope, keinen Traceback.
+Envelope, keinen Traceback. Alle Fehler laufen über eine gemeinsame
+`CapabilityError`-Basis (`wo/errors.py`), damit der Einstiegspunkt pro Capability
+keine Sonderbehandlung braucht.
 
 - [scripts/wo.py](../../../scripts/wo.py) — `:64` (_run_capability), `:153` (main)
 - [scripts/wo/capabilities/__init__.py](../../../scripts/wo/capabilities/__init__.py) — `REGISTRY`

@@ -10,7 +10,7 @@ revision: a2dda236b34e6222be84c6068d84203f340219a8
 
 # Qualität
 
-38 Tests, Standardbibliothek `unittest`, kein Runner nötig.
+104 Tests, Standardbibliothek `unittest`, kein Runner nötig.
 
 ## Why this shape
 Der Authoring Guide verbietet pip-Abhängigkeiten; ein Test-Runner wie pytest wäre
@@ -32,12 +32,25 @@ und vergleicht `(page, severity, message)`-Tripel; überspringbar.
 `test_contracts.py` — Envelope, Schema-Validator (`if`/`then`, Union-Typen,
 `additionalProperties`), Receipt, atomare Schreibvorgänge, Evidence-Append-only.
 `test_config.py` — TOML-Ebenen, Fehlermeldungen, Klassifikationseskalation.
+`test_redirects.py` — Parser für alle vier Dateitypen und die Ableitung der
+Befunde, ohne Netz.
+`test_images_schema.py` — Bildregeln und JSON-LD, plus zwei Grenztests: `alt`
+gehört `on-page`, und `schema` prüft Struktur statt Vokabular.
 
 Fixture: `scripts/tests/fixtures/site/public/` — drei Seiten, eine mit genau
 vier erwarteten Befunden, eine makellose, eine 404.
 
 Parität wurde zusätzlich auf einer echten Site mit 173 Seiten geprüft: 0 Befunde
 verloren, 0 erfunden.
+
+**Zwei Bugs fand kein Test, sondern der Lauf gegen die echten Daten.** Der
+JSON-LD-Block-Regex verlangte Anführungszeichen um den `type`-Attribut; der
+minifizierte Generator-Output liefert keine, also meldete eine vollständig
+markierte Site 173 Warnungen statt null. Und die `@id`-Regel meldete denselben
+Knoten auf jeder Seite als Fehler, obwohl genau das der richtige `@graph` ist.
+Ein Test mit realistischem, minifiziertem Markup deckt den ersten Fall jetzt ab;
+der zweite wird durch zwei Fixtures getragen, weil sich „kein Icon" und „fehlendes
+Icon" nicht in einem Fixture ausschließen.
 
 - [scripts/tests/test_parity.py](../../../scripts/tests/test_parity.py)
 - [scripts/tests/fixtures/site/public/index.html](../../../scripts/tests/fixtures/site/public/index.html)

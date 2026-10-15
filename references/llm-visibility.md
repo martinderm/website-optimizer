@@ -150,9 +150,9 @@ This is the durable part, and it holds regardless of any AI surface.
 Structured data (`Article`, `FAQPage`, `HowTo`) supplies context and helps
 entity assignment. It does not make unclear content clear. `llms.txt` is a
 curated orientation; it replaces neither clear page content nor `robots.txt` nor
-`sitemap.xml`. The technical checks that actually verify these things live in
+`sitemap.xml`. The technical checks that verify these things live in
 `indexing.md` and `structured-data.md`, and the mechanical ones in
-`capabilities/on_page/`.
+`scripts/wo/capabilities/on_page/` and `scripts/wo/capabilities/schema/`.
 
 ## Structured data for AI surfaces
 

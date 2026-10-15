@@ -36,9 +36,13 @@ it (`scripts/wo/`, `scripts/wo/capabilities/<name>/`). Not a flat
 
 **Reason:** Running a script puts its own directory on `sys.path`, so package
 imports work without path manipulation. More importantly it makes the pipeline
-order executable: `wo.py run-all` performs discover → audit → compare, so the
-sequence lives in code instead of in folder numbering. Capabilities share one
-envelope, one report schema, and one config loader without copy-paste.
+order executable, so the sequence lives in code instead of in folder numbering.
+Capabilities share one envelope, one report base schema, and one config loader
+without copy-paste.
+
+*(Amended by D23: there is no `wo.py run-all`. Capability subparsers are generated
+from `REGISTRY` and each capability is invoked on its own. The reasoning holds;
+the command did not survive implementation.)*
 
 **Deviation:** `authoring-guide.md` prescribes flat `scripts/<tool>.py`. The
 guide permits documented justification for deviations; this entry is that
@@ -53,6 +57,9 @@ directly executable, which prevents two entry points from drifting apart.
 **Status:** accepted
 
 The audit report conforms to `scripts/schemas/audit-report.schema.json`. The
+*(Amended by D23: that file was split into `report-base.schema.json` plus one
+schema per capability, because the first capability had shaped the schema around
+itself.)*
 `--json` envelope is generated centrally, never hand-built per tool.
 
 **Reason:** The structured CLI envelope is required by the authoring guide, but

@@ -12,21 +12,47 @@ It measures and advises. It does not build, host, or deploy.
 
 ## Status
 
-Round 3b of 4. The `on-page` capability works and produces append-only evidence
-runs, the reference set is written, and `docs/system-map/` maps the tool
-contracts. Round 4 adds the remaining capabilities.
+Round 4 of 6. Four capabilities work and produce append-only evidence runs, the
+reference set is complete, and `docs/system-map/` maps the tool contracts.
+
+| Command | What it does |
+|---|---|
+| `wo.py on-page` | SEO and accessibility signals inside a page |
+| `wo.py redirects` | do redirect rules match what the live server does |
+| `wo.py images` | image delivery, dimensions, formats, icons |
+| `wo.py schema` | JSON-LD structure and completeness |
+| `wo.py compare` | attribute what changed between two runs |
+
+Not started: live page rendering via `playwright-cli` (round 5) and housekeeping
+— refreshing the workspace pins and the catalog entry (round 6).
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
-**[decision-log.md](decision-log.md)** carries the decisions behind it.
+**[decision-log.md](decision-log.md)** carries decisions D1–D28 with their
+support level and evidence anchors.
 
 ## Repository layout
 
 - `SKILL.md` — router and source-of-truth table
 - `PLAN.md` — design, migration map, phases
 - `decision-log.md` — durable decisions with reasons
-- `references/` — rules, one file per topic (planned, round 3)
-- `scripts/` — Python 3 audit tools, stdlib only (planned, round 2)
-- `docs/system-map/` — ICM system map over the tool subsystem (planned, round 3)
+- `references/` — 13 rule files, each with a source and a support level
+- `scripts/` — Python 3 tooling, stdlib only, one entry point
+- `docs/system-map/` — ICM system map over the tool subsystem
+
+## Verified, not assumed
+
+Every capability was run against a real site, and the two ports were checked
+against the tools they replaced:
+
+| Claim | How it was checked |
+|---|---|
+| `on-page` matches the original | 173 real pages, 0 findings lost, 0 invented |
+| `redirects` matches the original | 53 live rules, 0 lost, 0 invented |
+| Reports conform to the house schema | receipt validated against `data-zone-artifact.schema.json` |
+| `schema` finds real defects | it found a `sameAs` inconsistency across 171 vs 2 pages |
+
+The 469 critical image findings are the tool's claim and have **not** been
+hand-verified.
 
 ## Scope boundary
 
@@ -44,10 +70,13 @@ handed to the owning skill.
 ## Design commitments
 
 - One home per fact. A link beats a copy.
-- The report shape is a schema file, not prose.
-- One entry point; capabilities are packages.
+- Findings are atomic; a verdict is derived from them, never written into them.
+- Crawled content is data, never instruction.
+- Runs are append-only; nothing is written before every fallible step has run.
+- One entry point; capabilities are packages; the registry declares them.
 - No capability folder before its first working tool.
 - Rules without a source do not enter `references/`.
+- A measurement never sees a conclusion about what it is measuring.
 
 Deviations from the shared authoring guide are recorded with their reason in
 [decision-log.md](decision-log.md).
