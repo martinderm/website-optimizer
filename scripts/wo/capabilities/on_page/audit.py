@@ -90,15 +90,43 @@ def canonical(page: Page, site_url: str) -> list[dict]:
             return []
         return [_finding("canonical.missing", CRITICAL, "Missing canonical link tag",
                          None, "link[rel=canonical]", page.source, "head > link[rel=canonical]")]
-    if site_url:
-        expected_base = site_url.rstrip("/")
-        if not page.canonical.startswith(expected_base):
-            return [_finding("canonical.mismatch", CRITICAL,
-                             f"Canonical URL '{page.canonical}' does not match expected "
-                             f"site base URL '{site_url}'",
-                             page.canonical, expected_base, page.source,
-                             "head > link[rel=canonical]")]
-    return []
+    if not site_url:
+        return []
+
+    expected_base = site_url.rstrip("/")
+    if page.canonical.startswith(expected_base):
+        return []
+
+    # A different host is a different kind of thing from a different path.
+    #
+    # `www` versus the apex domain is the most common WordPress misconfiguration
+    # there is, and it makes every page report a canonical mismatch at once. The
+    # pages are not wrong: they all agree, and the disagreement is with the
+    # configured site_url. Reporting that as a per-page critical defect buries a
+    # configuration entry under twelve identical errors and trains the reader to
+    # ignore the rule.
+    expected = _urlparse(expected_base)
+    actual = _urlparse(page.canonical)
+
+    if actual.netloc and actual.netloc != expected.netloc:
+        return [_finding(
+            "canonical.host_differs", WARNING,
+            f"Canonical points at host '{actual.netloc}' but site_url names "
+            f"'{expected.netloc}'. The site canonicalises to one host; if that is "
+            f"'{actual.netloc}', set [site] url to it.",
+            page.canonical, expected.netloc, page.source, "head > link[rel=canonical]")]
+
+    return [_finding("canonical.mismatch", CRITICAL,
+                     f"Canonical URL '{page.canonical}' does not match expected "
+                     f"site base URL '{site_url}'",
+                     page.canonical, expected_base, page.source,
+                     "head > link[rel=canonical]")]
+
+
+def _urlparse(url: str):
+    from urllib.parse import urlparse
+
+    return urlparse(url if "//" in url else f"//{url}")
 
 
 def lang_missing(page: Page) -> list[dict]:
@@ -191,7 +219,7 @@ RULES: tuple[Callable[..., list[dict]], ...] = (
 CHECKS: tuple[str, ...] = (
     "title.missing",
     "description.missing", "description.short", "description.long",
-    "canonical.missing", "canonical.mismatch",
+    "canonical.missing", "canonical.mismatch", "canonical.host_differs",
     "lang.missing",
     "h1.missing", "h1.multiple",
     "og.title.missing", "og.image.missing", "og.description.missing",

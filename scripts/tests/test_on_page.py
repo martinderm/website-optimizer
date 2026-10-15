@@ -46,7 +46,10 @@ class RuleTest(unittest.TestCase):
             lambda p: setattr(p, "description", "x" * 400),
             lambda p: setattr(p, "description", None),
             lambda p: setattr(p, "canonical", None),
-            lambda p: setattr(p, "canonical", "https://other.example/"),
+            # Two shapes of disagreement, because the rule now distinguishes
+            # them: another host is a configuration hint, another path on the
+            # same host is a page defect.
+            lambda p: setattr(p, "canonical", "https://www.example.com/"),
             lambda p: setattr(p, "h1_count", 0),
             lambda p: setattr(p, "h1_count", 4),
             lambda p: setattr(p, "og", {}),
@@ -58,6 +61,14 @@ class RuleTest(unittest.TestCase):
             fresh = extract_page(FIXTURES / "index.html")
             mutate(fresh)
             emitted |= {f["rule_id"] for f in audit_page(fresh, SITE)}
+
+        # canonical.mismatch is unreachable when site_url is a bare host: every
+        # canonical on that host starts with it. It needs a site base with a
+        # path prefix, which is the only shape in which a same-host canonical
+        # can fall outside the base.
+        outside = extract_page(FIXTURES / "index.html")
+        outside.canonical = "https://example.com/anderer-shop/"
+        emitted |= {f["rule_id"] for f in audit_page(outside, "https://example.com/shop")}
 
         self.assertEqual(emitted - set(CHECKS), set(),
                          "a rule emits an id that CHECKS does not declare")
@@ -95,16 +106,40 @@ class RuleTest(unittest.TestCase):
         self.assertNotIn("canonical.missing", ids)
         self.assertIn("og.title.missing", ids)
 
-    def test_canonical_mismatch_uses_site_base(self):
-        findings = audit_page(self.index, "https://other.example")
+    def test_canonical_on_another_host_is_a_config_hint_not_a_page_defect(self):
+        """`www` versus apex is the commonest WordPress misconfiguration.
+
+        It once produced a critical canonical.mismatch on every page, which
+        buried a single wrong config value under N identical errors and taught
+        the reader to ignore the rule.
+        """
+        findings = audit_page(self.index, "https://www.example.com")
+        ids = _ids(findings)
+        self.assertIn("canonical.host_differs", ids)
+        self.assertNotIn("canonical.mismatch", ids)
+
+        host_finding = next(f for f in findings if f["rule_id"] == "canonical.host_differs")
+        self.assertEqual(host_finding["severity"], "warning")
+        # The message must name the fix, or it is just a different complaint.
+        self.assertIn("set [site] url", host_finding["message"])
+
+    def test_canonical_outside_a_path_prefixed_site_base_is_still_critical(self):
+        """The only shape in which a same-host canonical can be wrong.
+
+        With a bare host as the base, every canonical on that host starts with
+        it and the mismatch branch is unreachable. A sub-path site base is what
+        makes it reachable, and it is what a multilingual or multi-shop install
+        actually has.
+        """
+        findings = audit_page(self.index, "https://example.com/shop")
         ids = _ids(findings)
         self.assertIn("canonical.mismatch", ids)
-        message = [f for f in findings if f["rule_id"] == "canonical.mismatch"][0]["message"]
-        self.assertEqual(
-            message,
-            "Canonical URL 'https://example.com/' does not match expected site base "
-            "URL 'https://other.example'",
-        )
+        self.assertNotIn("canonical.host_differs", ids)
+
+    def test_matching_canonical_is_silent(self):
+        findings = audit_page(self.index, "https://example.com")
+        self.assertNotIn("canonical.mismatch", _ids(findings))
+        self.assertNotIn("canonical.host_differs", _ids(findings))
 
     def test_description_length_bounds(self):
         short = extract_page(FIXTURES / "index.html")

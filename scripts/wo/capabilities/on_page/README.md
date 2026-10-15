@@ -37,7 +37,8 @@ conclusion it was handed.
 | `description.short` | warning | description shorter than 30 characters |
 | `description.long` | warning | description longer than 300 characters |
 | `canonical.missing` | critical | no `link[rel=canonical]` (not on a 404 page) |
-| `canonical.mismatch` | critical | canonical does not start with the configured site base URL |
+| `canonical.mismatch` | critical | canonical falls outside the configured site base URL (a path prefix) |
+| `canonical.host_differs` | warning | canonical names a different **host** than `[site] url` |
 | `lang.missing` | critical | no `lang` on `<html>` |
 | `h1.missing` | critical | no `<h1>` |
 | `h1.multiple` | warning | more than one `<h1>` |
@@ -78,9 +79,27 @@ carries page prose beyond the value itself.
    is a deliberate behaviour change, not a refactor: say so in the commit and
    update `post-migration-seo-checklist.md` if it is documented there.
 
+## Known limits
+
+**`[site] url` must be the host the site canonicalises to.** Not its preferred
+host, its *canonical* host. On a WordPress site this is usually `www` where the
+apex redirects — which is the commonest misconfiguration in that platform, and
+getting it wrong makes every page report something.
+
+Before the split into `canonical.mismatch` and `canonical.host_differs`, that
+mistake produced one critical finding per page. A dozen identical criticals on a
+site that is internally consistent train the reader to ignore the rule, and the
+one thing actually wrong — a single line of configuration — disappears in them.
+A host disagreement is now a warning that names the fix; only a canonical
+outside a path-prefixed base is a page-level defect.
+
+`canonical.mismatch` is unreachable when `[site] url` is a bare host, because
+every canonical on that host starts with it. It needs a base carrying a path
+prefix, which is what a multilingual or multi-shop install has.
+
 ## Provenance
 
 Ported from `hugo-wizard/scripts/audit-site-seo.py`. Rule conditions, severities
-and message texts are unchanged, so `tests/test_parity.py` compares the two
-implementations' output and fails on any divergence. That test skips itself once
-the original is deleted.
+and message texts are unchanged **except** `canonical.mismatch`, which no longer
+fires for a host-only disagreement — see the limits section above. The parity
+test compares both implementations and skips itself once the original is deleted.

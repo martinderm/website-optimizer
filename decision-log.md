@@ -822,3 +822,37 @@ in the database or a plugin. Enabling that capability there today would report
 "no rules found" about a site that has redirects. It must either gain a source
 or be explicitly switched off per site, and the second is what the config
 already supports.
+
+---
+
+## D38 - A host disagreement is reported at the severity of what it is
+
+**Status:** accepted
+**Support level:** observed
+
+**Decision:** a canonical naming a different **host** than `[site] url` is
+`canonical.host_differs` at warning severity and names the fix. `canonical.mismatch`
+stays critical, for a canonical falling outside a path-prefixed base.
+
+**Reason:** found by pointing the live crawl at a real WordPress site. Twelve of
+twelve pages reported a critical canonical mismatch; every canonical was correct.
+The site canonicalises to `www`, the configuration named the apex host - the
+commonest WordPress misconfiguration there is. One wrong line of configuration
+became a dozen identical criticals, and a reader who sees a dozen identical
+criticals learns to ignore the rule. The one thing actually wrong disappeared
+inside them.
+
+**Why two rules rather than one with a softer severity:** the two disagree in
+kind. One is a configuration value the operator can fix once; the other is a page
+whose canonical points somewhere else and is a defect in that page. Collapsing
+them into one rule at one severity would misdescribe half of them.
+
+**Nothing is suppressed.** The host disagreement is still reported on every page,
+because a page whose canonical disagrees with the configured host is worth seeing.
+It is simply no longer dressed up as a broken page.
+
+**Also found, and older:** `canonical.mismatch` is unreachable when `[site] url`
+is a bare host, since every canonical on that host starts with it. It only fires
+for a base carrying a path prefix. That was true before this change, so the rule
+was silently dead for most single-host installs. The tests now cover the one
+shape that reaches it.
