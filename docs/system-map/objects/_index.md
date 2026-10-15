@@ -13,8 +13,9 @@
 - [images](images.md) - live / verified, 2026-10-15
 - [schema](schema.md) - live / verified, 2026-10-15
 - [quality](quality.md) - live / verified, 2026-10-15
+- [crawl](crawl.md) - live / verified, 2026-10-15
+- [page-set](page-set.md) - live / verified, 2026-10-15
 
-Geplant, noch nicht implementiert — als `ghost` geführt, keine Karte:
-`images`, `schema`, Live-Crawl von Seiten (nicht von Redirects — das ist
-implementiert), und `compare` als Prozesskarte unter
+Geplant, noch nicht implementiert - als `ghost` geführt, keine Karte:
+`compare` als Prozesskarte unter
 [compare-baseline](../processes/compare-baseline.md).

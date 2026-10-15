@@ -31,7 +31,20 @@ aus. Die Reihenfolge steht damit im Code und nicht in Ordnernamen.
 Kommandos: `init-site`, `on-page`, `redirects`, `images`, `schema`, `compare`,
 `runs`, `validate-report`. Gemeinsame Flags: `--config`, `--workspace`, `--json`.
 Capability-Kommandos zusätzlich `--strict`, `--ignore-noindex`, `--run`,
-`--dry-run`; `compare` zusätzlich `--baseline` und `--current`.
+`--dry-run`, `--live`; `compare` zusätzlich `--baseline` und `--current`.
+
+`--live` gibt es für alle Capabilities außer `compare`. Es ist bewusst ein
+Argument und kein Config-Wert: die Entscheidung, einen Browser zu starten, wird
+von einer Person getroffen und nicht von einem Hook (D26).
+
+**Die Run-Id wird vor dem Lauf festgelegt, nicht danach.** Ein Live-Crawl
+schreibt sein Roh-HTML während der Arbeit; eine Id, die erst beim Schreiben des
+Reports gewählt würde, landete in einem Ordner ohne Bezug zu dem Lauf, zu dem
+die Artefakte gehören (D27).
+
+Der Envelope trägt bei Live-Läufen zusätzlich `crawl`, `crawl_mode` und
+`rules_run`. Ohne sie ist „0 Befunde" aus drei abgerufenen Seiten nicht von
+„0 Befunde" aus vierhundert zu unterscheiden.
 
 Subparser werden aus `REGISTRY` generiert, nicht hartkodiert: eine Capability zu
 registrieren ist damit der einzige nötige Schritt. Vor dieser Änderung konnte die

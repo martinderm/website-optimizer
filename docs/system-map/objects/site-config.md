@@ -32,8 +32,19 @@ schlüsselweise gemischt), `:87` `load` (portabel zuerst, dann lokal).
 
 `SiteConfig`: `site_url`, `domain`, `static_dir`, `workspace_root`, `ignore_path`,
 `strict`, `crawl_mode`, `data_classification`, `contacted_private_surface`,
-`owner`, `retention_class`, `capabilities`. `classification` eskaliert einmalig
-auf `confidential`, wenn `contacted_private_surface` gesetzt ist (D19).
+`owner`, `retention_class`, `capabilities`, `redirects`, `crawl`. `classification`
+eskaliert einmalig auf `confidential`, wenn `contacted_private_surface` gesetzt
+ist (D19).
+
+Der `[crawl]`-Block wird per `crawl_settings()` validiert: `start_urls`,
+`sitemap`, `max_pages`, `timeout_seconds`, `settle_ms`, `cli_path`. Er ist
+Deklaration, **kein Schalter** — es gibt dort nichts, das einen Crawl aktiviert.
+`--live` ist ein Kommandozeilen-Argument einer Person (D26).
+
+**Der lokale Layer greift auch bei explizitem `--config`.** Das war ein Bug: er
+wurde nur im Auto-Discovery-Zweig gemerged, wodurch genau der dokumentierte
+Aufruf jede maschinenspezifische Pfadangabe verlor und mit einem Verzeichnis
+Fehlschlag meldete, das die Konfiguration scheinbar definierte (D29).
 
 `find_workspace_root` läuft nach oben, bis `.agents/` oder `AGENTS.md`
 auftaucht. Fehlermeldungen benennen den konkreten nächsten Schritt.
@@ -41,7 +52,7 @@ auftaucht. Fehlermeldungen benennen den konkreten nächsten Schritt.
 - [scripts/wo/config.py](../../../scripts/wo/config.py) — `:24`, `:76`, `:87`
 
 ## Connected to
-Gehört zu [CLI](cli.md), [Receipt](receipt.md) (liefert `owner` und Klassifikation), [On-Page](on-page.md) (liest `static_dir`, `site_url`, `ignore_path`, `capabilities`).
+Gehört zu [CLI](cli.md), [Receipt](receipt.md) (liefert `owner` und Klassifikation), [On-Page](on-page.md) (liest `static_dir`, `site_url`, `ignore_path`, `capabilities`), [Page-Set](page-set.md) und [Crawl](crawl.md) (lesen `[crawl]`).
 
 ## If you change this
 - **Hits:** [CLI](cli.md) (`init-site`, Template), [On-Page](on-page.md) (nimmt `SiteConfig`), [Receipt](receipt.md) (`owner`, `data_classification`), `SKILL.md` und `scripts/README.md` (Dateinamen), die Config-Tests in [Qualität](quality.md), sowie die `.gitignore` des konsumierenden Workspace.

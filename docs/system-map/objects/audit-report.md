@@ -41,10 +41,16 @@ ist ein Report auf einem anderen Stand, und das soll auffallen.
 Finding-Definition. `subject` heißt so statt `page`, weil nicht jede Capability
 über Seiten spricht: ein Redirect-Befund hat eine Quelle, keine Seite.
 
-`scripts/schemas/on-page-report.schema.json` — `source.kind: static_dir`,
-`summary` mit `audited_pages`, `pages[]`.
+`scripts/schemas/on-page-report.schema.json` — `source.kind` ist jetzt ein
+Enum aus `static_dir` und `live_render`, `summary` mit `audited_pages`, `pages[]`.
 `scripts/schemas/redirects-report.schema.json` — `source.kind: redirect_file`,
 `summary` mit `passed`/`failed`, `checks[]` (eine Zeile pro geprüfter Regel).
+
+**`crawl` ist nur bei Live-Läufen Pflicht, und genau deshalb Pflicht.** Ein Report
+über 0 Befunde aus 3 abgerufenen Seiten bedeutet etwas anderes als derselbe
+Report über 400. Ohne den Block wären beide ununterscheidbar, und die
+Befundzahl antwortet auf „was ist falsch", nie auf „wie viel hast du gesehen"
+(D32).
 
 `scripts/wo/jsonschema.py:52` `validate`, `:109` `assert_valid`, `:23`
 `SUPPORTED`, dazu `load_schema` für `$ref`-Auflösung.

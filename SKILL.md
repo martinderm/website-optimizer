@@ -15,18 +15,16 @@ description: >-
 
 ## Status
 
-**Round 4 — four capabilities working.**
+**Round 5 — five capabilities, static and live.**
 
-`on-page` audits a static output directory; `redirects` probes live redirect
-rules. Both write append-only evidence runs. The reference set is complete and
-`docs/system-map/` maps the tool contracts.
+`on-page`, `images` and `schema` audit build output or, with `--live`, pages
+rendered in a real browser; `redirects` probes live rules; `compare` attributes
+what changed. All write append-only evidence runs. The reference set is complete
+and `docs/system-map/` maps the tool contracts.
 
 Before changing anything in `scripts/`, read
 [`docs/system-map/`](docs/system-map/README.md): it maps the tool contracts and
 says what a given change hits and what it does not.
-
-Still to come: `images`, `schema`, and live page rendering via`playwright-cli` (on
-request only, never from a hook).
 
 ## Quick start
 
@@ -39,7 +37,15 @@ python scripts/wo.py images                # image delivery, dimensions, icons
 python scripts/wo.py schema                # JSON-LD structure and completeness
 python scripts/wo.py runs                 # list stored runs
 python scripts/wo.py on-page --dry-run    # audit, write nothing
+
+python scripts/wo.py on-page --live       # render pages in a browser instead
 ```
+
+`--live` renders the site in `playwright-cli` and audits the result. It runs
+because you asked, never from a hook: a crawl costs minutes, shares a browser
+session with anything else using one, and depends on consent state. Raw HTML
+lands in `data/crawl/<run-id>/`, which is regenerable — the run folder holds the
+findings.
 
 Configure with `site.optimizer.toml` (portable, commit it) and
 `site.optimizer.local.toml` (machine paths, do not commit it).
@@ -85,15 +91,19 @@ hosting, report it and hand off to the owning skill.
 
 ## Dependencies
 
-Live page rendering uses `playwright-cli`, invoked as an external CLI and
-probed for version at runtime. It is presumed available on this system; its
-absence only blocks live crawling, never static auditing.
+Live page rendering uses `playwright-cli`, invoked as an external process and
+resolved at runtime: a real executable if one is on `PATH`, otherwise the node
+entry point behind npm's `.CMD` shim, so no shell is involved. On Windows the
+CLI selects Edge rather than Chrome, because Edge is what the preflight reports
+as installed. Its absence only blocks live crawling, never static auditing.
 
 ## Run state
 
 Nothing is written inside this skill. Each audited site gets a folder in the
 consuming workspace, following that workspace's conventions, holding the site
-record, its config, and the run products (crawl, reports, baseline).
+record, its config, and the run products. Findings go to the evidence zone;
+raw rendered HTML goes to the workspace's data zone under `data/crawl/`, is
+marked `crawl-ephemeral`, and may be deleted at any time.
 
 ## Source of truth
 

@@ -10,7 +10,7 @@ revision: a2dda236b34e6222be84c6068d84203f340219a8
 
 # Qualität
 
-104 Tests, Standardbibliothek `unittest`, kein Runner nötig.
+131 Tests, Standardbibliothek `unittest`, kein Runner nötig.
 
 ## Why this shape
 Der Authoring Guide verbietet pip-Abhängigkeiten; ein Test-Runner wie pytest wäre
@@ -52,7 +52,21 @@ Ein Test mit realistischem, minifiziertem Markup deckt den ersten Fall jetzt ab;
 der zweite wird durch zwei Fixtures getragen, weil sich „kein Icon" und „fehlendes
 Icon" nicht in einem Fixture ausschließen.
 
+**Und drei fand die Prüfung der Behauptungen selbst.** Als jede Image-Regel gegen
+die gebaute Ausgabe mit einem zweiten Parser nachgezählt wurde, kam heraus: 140
+der 469 kritischen Befunde waren `<img>` ohne `src` — JS-Platzhalter, die nichts
+laden. Parallel brach `--config` den lokalen Config-Layer stillschweigend ab, und
+der erste echte Live-Crawl dekodierte mit cp1252 statt UTF-8. Keiner dieser drei
+Bugs war von einer Paritätsprüfung berührt: sie beweisen, dass ein Port keine
+Regeln des Originals verloren hat, und sagen nichts darüber, ob die Regeln richtig
+sind. Diese Lehre steht auch in [Skill-Verhalten](skill-behavior.md).
+
+`test_crawl.py` (21 Fälle) fährt ohne Netz und ohne Browser: `BrowserSession`
+nimmt einen `runner`-Callable, ein Crawl lässt sich also aus einer Liste von
+Strings steuern. Geprüft werden die Entscheidungen, nicht der Browser.
+
 - [scripts/tests/test_parity.py](../../../scripts/tests/test_parity.py)
+- [scripts/tests/test_crawl.py](../../../scripts/tests/test_crawl.py)
 - [scripts/tests/fixtures/site/public/index.html](../../../scripts/tests/fixtures/site/public/index.html)
 
 ## Connected to

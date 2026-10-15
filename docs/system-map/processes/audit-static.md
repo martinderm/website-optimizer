@@ -45,11 +45,15 @@ nicht — lieber kein Report als einer, der wie ein gültiger aussieht.
    Fehler, der die Zeile nennt, die zu ergänzen ist.
    — [scripts/wo.py](../../../scripts/wo.py) (`_run_capability`)
 3. `find_static_dir` erkennt `public/`, ein reines HTML-Verzeichnis oder den
-   angegebenen Pfad.
-   — [scripts/wo/capabilities/on_page/audit.py:206](../../../scripts/wo/capabilities/on_page/audit.py)
+   angegebenen Pfad. Die Funktion liegt jetzt in
+   [Page-Set](../objects/page-set.md), weil drei Capabilities sie brauchen und
+   nur eine Kopie eine Regel bleibt; `on_page.audit` re-exportiert sie, damit der
+   Paritätstest nicht wegen einer Verschiebung bricht.
+   — [scripts/wo/pages.py](../../../scripts/wo/pages.py)
 4. `iter_html_files` liefert eine **sortierte** Liste; `ignore_path` wird als
-   Regex auf den workspace-relativen Pfad angewandt.
-   — [scripts/wo/page.py:162](../../../scripts/wo/page.py)
+   Regex auf den workspace-relativen Pfad angewandt. Die Extraktion läuft über
+   `extract_page` — dieselbe Funktion, die auch gerendertes Markup verarbeitet.
+   — [scripts/wo/page.py](../../../scripts/wo/page.py), [scripts/wo/pages.py](../../../scripts/wo/pages.py)
 5. `audit_page` erzeugt atomare Befunde in fester Regelreihenfolge.
    — [scripts/wo/capabilities/on_page/audit.py:181](../../../scripts/wo/capabilities/on_page/audit.py)
 6. `jsonschema.validate` prüft den Report; bei Verstoß wird nichts geschrieben.
@@ -58,9 +62,17 @@ nicht — lieber kein Report als einer, der wie ein gültiger aussieht.
    die Teilmenge des Daten-Zonen-Schemas.
    — [scripts/wo/report.py:140](../../../scripts/wo/report.py)
 
+## Compare also this
+[Audit-Live](audit-live.md) — derselbe Ablauf über eine andere Quelle.
+
+**Looks like but is not:** [Audit-Live](audit-live.md) ist keine Variante, die
+man anstelle dieses Ablaufs wählt, weil sie gründlicher wäre. Sie ist nötig, wo
+es kein Build-Verzeichnis gibt, und die statischen Befunde sind keine Teilmenge
+der live gefundenen.
+
 ## If you change this
-- **Hits:** [Site-Config](../objects/site-config.md), [Page](../objects/page.md), [On-Page](../objects/on-page.md), [Audit-Report](../objects/audit-report.md), [Receipt](../objects/receipt.md), [Envelope](../objects/envelope.md), [Qualität](../objects/quality.md).
-- **Does not hit:** [Referenzsatz](../objects/reference-set.md) — der Ablauf ändert nicht, was inhaltlich korrekt ist; der Vergleichsprozess, solange `compare` nicht existiert.
+- **Hits:** [Site-Config](../objects/site-config.md), [Page](../objects/page.md), [Page-Set](../objects/page-set.md), [On-Page](../objects/on-page.md), [Audit-Report](../objects/audit-report.md), [Receipt](../objects/receipt.md), [Envelope](../objects/envelope.md), [Qualität](../objects/quality.md).
+- **Does not hit:** [Referenzsatz](../objects/reference-set.md) — der Ablauf ändert nicht, was inhaltlich korrekt ist; [Crawl](../objects/crawl.md), solange kein Browser beteiligt ist.
 
 ## Surfaces
 Kommandozeile. Schreibt ausschließlich in den Laufordner; `--dry-run` schreibt

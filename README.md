@@ -12,7 +12,7 @@ It measures and advises. It does not build, host, or deploy.
 
 ## Status
 
-Round 4 of 6. Four capabilities work and produce append-only evidence runs, the
+Round 5 of 6. Five capabilities work and produce append-only evidence runs, the
 reference set is complete, and `docs/system-map/` maps the tool contracts.
 
 | Command | What it does |
@@ -23,8 +23,9 @@ reference set is complete, and `docs/system-map/` maps the tool contracts.
 | `wo.py schema` | JSON-LD structure and completeness |
 | `wo.py compare` | attribute what changed between two runs |
 
-Not started: live page rendering via `playwright-cli` (round 5) and housekeeping
-— refreshing the workspace pins and the catalog entry (round 6).
+`on-page`, `images` and `schema` take `--live`, which renders pages in a browser
+instead of reading build output. For a static site both paths must agree; for a
+dynamic one only the live path has anything to read.
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
 **[decision-log.md](decision-log.md)** carries decisions D1–D31 with their
@@ -51,6 +52,13 @@ against the tools they replaced:
 | Reports conform to the house schema | receipt validated against `data-zone-artifact.schema.json` |
 | `schema` finds real defects | it found a `sameAs` inconsistency across 171 vs 2 pages |
 | `images` counts correctly | every rule re-counted independently against the built output |
+| `--live` agrees with the static build | 25 real pages, all three capabilities, no difference either way |
+
+The live path was checked the only way that means anything: the same pages read
+from the build directory and rendered in a browser, then compared page by page.
+All three capabilities produced identical findings. For a Hugo site that is the
+strongest available result — a crawl that added or dropped anything would have
+shown up as a difference, and none did.
 
 Verifying the image capability rule by rule, with a separate parser rather than
 by re-reading the tool's own numbers, found one thing the tool had wrong about
@@ -63,6 +71,20 @@ That exercise also produced a documented coverage gap: `image.loading_unset`
 fires only when *no* image on a page declares a strategy, so 121 pages with a
 mixed declaration are reported clean. See the limits section in
 `capabilities/images/README.md`.
+
+## What a live run will not tell you
+
+Three things are deliberately absent from a `--live` report, and each says so
+rather than passing quietly:
+
+- `icon.file_missing` is dropped from `rules_run`. It needs a build directory to
+  compare against, and a crawl has none.
+- `crawl.requested` / `fetched` / `failed` travel with the report. A count of
+  zero findings from three fetched pages means something different from the same
+  count over four hundred.
+- If most rendered pages are byte-identical, the run raises instead of
+  reporting. A consent wall is found on every page and reported as that page's
+  content; refusing is more useful than a confident answer about a dialog.
 
 ## Scope boundary
 

@@ -10,7 +10,10 @@ Details.
 | Report-Struktur oder Schema ändern | [Audit-Report](../objects/audit-report.md), [Receipt](../objects/receipt.md) |
 | Receipt-Felder, Klassifikation, Retention | [Receipt](../objects/receipt.md), [Site-Config](../objects/site-config.md) |
 | Konfigurationsoptionen, Config-Ebenen | [Site-Config](../objects/site-config.md), [CLI](../objects/cli.md) |
-| Extraktionsgrenze, neue Seitenfelder | [Page](../objects/page.md), [On-Page](../objects/on-page.md), [Qualität](../objects/quality.md) |
+| Extraktionsgrenze, neue Seitenfelder | [Page](../objects/page.md), [Page-Set](../objects/page-set.md), [On-Page](../objects/on-page.md), [Qualität](../objects/quality.md) |
+| Live-Rendering, Browser, Consent-Wall, Crawl-Artefakte | [Crawl](../objects/crawl.md), [Page-Set](../objects/page-set.md), [Audit-Live](../processes/audit-live.md) |
+| `--live` oder `[crawl]` in der Konfiguration | [CLI](../objects/cli.md), [Site-Config](../objects/site-config.md), [Audit-Live](../processes/audit-live.md) |
+| Regel, die nur im statischen oder nur im Live-Lauf gilt | [Page-Set](../objects/page-set.md) — `rules_run` weicht ab, wenn eine Regel im jeweiligen Modus nicht laufen kann |
 | Envelope-Felder, Zustände, Exit-Codes | [Envelope](../objects/envelope.md), [CLI](../objects/cli.md) |
 | Neue Reference-Datei | [Referenzsatz](../objects/reference-set.md), [Skill-Verhalten](../objects/skill-behavior.md) für die Router-Zeile |
 | `scripts/README.md`, `SKILL.md`, Katalogeintrag | [Skill-Verhalten](../objects/skill-behavior.md), [CLI](../objects/cli.md) |

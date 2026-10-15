@@ -457,11 +457,20 @@ reports and baselines into the consuming workspace by design.
 
 Kept separate so a failing capability never blocked the map or the references.
 
-### Round 5 — live page rendering (not started)
+### Round 5 — live page rendering — **done**
 
-`page.py` extended to parse an HTML string rather than only a file, plus a
-`playwright-cli` subprocess binding. On request only, never from a hook (D26).
-Crawl artifacts are written beside the run, not into it (D27).
+`page.extract_page_from_html` as the single new extraction entry point;
+`wo/crawl.py` binding `playwright-cli`; `wo/pages.py` resolving either source
+into `Page` objects so no capability grows a `--live` branch. On request only,
+never from a hook (D26). Crawl artifacts beside the run in the data zone (D27).
+
+Verified against the reference site: 25 pages read from the build directory and
+rendered in a browser, compared page by page per capability. All three identical.
+The consent wall of D26(d) is now detected rather than merely documented — most
+identical pages raise instead of reporting.
+
+New decisions: D32 (a crawl reports its reach), D33 (one code path), D34 (the
+wall guard), D35 (UTF-8, not the terminal's encoding), D36 (no shell).
 
 ### Round 6 — housekeeping
 
