@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Audit artifacts are products of a run, never source. They belong in the
+# consuming workspace's data zone, not in this skill.
+baselines/
+reports/
+*.report.json
+
+# OS noise
+.DS_Store
+Thumbs.db
