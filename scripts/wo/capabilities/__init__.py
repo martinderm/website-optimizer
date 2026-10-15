@@ -12,7 +12,14 @@ so the identifier space uses the underscore and the interface keeps the hyphen.
 from __future__ import annotations
 
 REGISTRY = {
-    "on-page": "wo.capabilities.on_page.audit",
+    "on-page": {
+        "module": "wo.capabilities.on_page.audit",
+        "schema": "on-page-report.schema.json",
+    },
+    "redirects": {
+        "module": "wo.capabilities.redirects.audit",
+        "schema": "redirects-report.schema.json",
+    },
 }
 
 __all__ = ["REGISTRY"]

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martinderm/website-optimizer/schemas/redirects-report.schema.json",
+  "title": "Redirect Audit Report",
+  "type": "object",
+  "allOf": [
+    {"$ref": "report-base.schema.json"},
+    {
+      "type": "object",
+      "required": ["source", "summary", "checks"],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "redirect_file"},
+            "path": {"type": ["string", "null"]}
+          }
+        },
+        "summary": {
+          "type": "object",
+          "required": [
+            "total_tested", "passed", "failed", "check_targets_enabled",
+            "total_critical_issues", "total_warnings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "total_tested": {"type": "integer", "minLength": 0},
+            "passed": {"type": "integer", "minLength": 0},
+            "failed": {"type": "integer", "minLength": 0},
+            "check_targets_enabled": {"type": "boolean"},
+            "total_critical_issues": {"type": "integer", "minLength": 0},
+            "total_warnings": {"type": "integer", "minLength": 0}
+          }
+        },
+        "checks": {
+          "type": "array",
+          "description": "One row per probed rule, passing or failing. Findings carry only the failures.",
+          "items": {
+            "type": "object",
+            "required": [
+              "source", "requested_url", "expected_target", "status_code", "location",
+              "redirect_valid", "target_status", "target_valid", "is_wildcard", "success", "error"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "source": {"type": "string"},
+              "requested_url": {"type": "string"},
+              "expected_target": {"type": "string"},
+              "status_code": {"type": ["integer", "null"]},
+              "location": {"type": ["string", "null"]},
+              "redirect_valid": {"type": "boolean"},
+              "target_status": {"type": ["integer", "null"]},
+              "target_valid": {"type": "boolean"},
+              "is_wildcard": {"type": "boolean"},
+              "success": {"type": "boolean"},
+              "error": {"type": ["string", "null"]}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

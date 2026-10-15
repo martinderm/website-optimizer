@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martinderm/website-optimizer/schemas/report-base.schema.json",
+  "title": "Audit Report — common base",
+  "description": "Fields every capability report carries. Capability-specific sections are added by the extending schema.",
+  "type": "object",
+  "required": ["report_version", "tool", "generated_at", "crawl_mode", "site", "findings"],
+  "properties": {
+    "report_version": {"type": "string", "minLength": 1},
+    "tool": {
+      "type": "object",
+      "required": ["name", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {"type": "string"},
+        "version": {"type": "string"}
+      }
+    },
+    "generated_at": {"type": "string", "minLength": 1},
+    "crawl_mode": {"enum": ["static", "live"]},
+    "site": {
+      "type": "object",
+      "required": ["url", "domain"],
+      "additionalProperties": false,
+      "properties": {
+        "url": {"type": "string"},
+        "domain": {"type": "string"}
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Atomic findings. A verdict is derived from these, never written into them.",
+      "items": {
+        "type": "object",
+        "required": ["rule_id", "severity", "message", "observed", "expected", "subject", "location"],
+        "additionalProperties": false,
+        "properties": {
+          "rule_id": {"type": "string", "minLength": 1},
+          "severity": {"enum": ["critical", "warning"]},
+          "message": {"type": "string", "minLength": 1},
+          "observed": {},
+          "expected": {},
+          "subject": {"type": "string", "minLength": 1},
+          "location": {"type": "string", "minLength": 1}
+        }
+      }
+    }
+  }
+}

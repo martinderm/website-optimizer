@@ -461,3 +461,42 @@ behaviour, so parity is unaffected.
 **Consequence:** this is the one intentional behaviour change in the port. It is
 recorded here because everything else about the port is meant to be
 indistinguishable from what it replaces.
+
+## D23 — Reports share a base schema; each capability owns its own
+
+**Date:** 2026-10-15
+**Status:** accepted
+**support_level:** fully_supported
+
+`report-base.schema.json` carries what every report needs. Each capability has its
+own schema that pulls it in via `allOf`. The finding key is `subject`, not `page`,
+because a redirect finding has a source URL, not a page.
+
+**Reason:** the first capability shaped the schema around itself — one `summary`
+object with `audited_pages` and one `pages` array. The second capability has
+`passed`/`failed` and one `checks` array. Carrying both in one schema would have
+meant optional fields nobody required, or a generic `summary: object` that
+validates nothing. The trigger was concrete: the second capability failed at
+runtime with `KeyError: 'audited_pages'`, in a message that had hard-coded the
+first capability's vocabulary.
+
+**Consequence:** adding a capability means adding a schema file and one registry
+entry. The registry — not the CLI parser — declares what a capability is; the
+subparsers are generated from it, so a new capability cannot be half-wired.
+
+## D24 — Nothing is written before every fallible step has run
+
+**Date:** 2026-10-15
+**Status:** accepted
+**support_level:** fully_supported
+**references:** `scripts/wo.py` (`_run_capability`)
+
+The report is composed, validated and summarised before `write_run` is called.
+
+**Reason:** an evidence run is an append-only observation. An artifact written by
+a process that then crashes records the tool's failure, not the site's state —
+and it sits in the history a future `compare` will read as if it were real. Two
+such orphan runs were produced during development and removed rather than kept.
+
+**Consequence:** a run folder exists only if the run completed. Failure leaves no
+trace in the evidence zone; the failure is visible in the envelope instead.

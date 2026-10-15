@@ -33,7 +33,7 @@ def _finding(
     message: str,
     observed: Any,
     expected: Any,
-    page: str,
+    subject: str,
     location: str,
 ) -> dict[str, Any]:
     """One atomic observation. Never carries page prose beyond the value itself."""
@@ -43,7 +43,7 @@ def _finding(
         "message": message,
         "observed": observed,
         "expected": expected,
-        "page": page,
+        "subject": subject,
         "location": location,
     }
 
@@ -239,7 +239,7 @@ def run(config, ignore_noindex: bool = False, pages: list[Path] | None = None) -
         })
 
     critical = sum(1 for f in findings if f["severity"] == CRITICAL)
-    pages_with_findings = len({f["page"] for f in findings})
+    pages_with_findings = len({f["subject"] for f in findings})
 
     return {
         "report_version": REPORT_VERSION,

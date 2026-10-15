@@ -27,7 +27,7 @@ from wo import jsonschema                        # noqa: E402
 from wo import report as report_module           # noqa: E402
 from wo.capabilities import REGISTRY              # noqa: E402
 
-SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "audit-report.schema.json"
+SCHEMA_DIR = Path(__file__).resolve().parent / "schemas"
 
 
 def _load_config(args):
@@ -62,8 +62,8 @@ def cmd_init_site(args) -> dict:
 
 
 def _run_capability(name: str, args) -> dict:
-    module_name = REGISTRY.get(name)
-    if module_name is None:
+    entry = REGISTRY.get(name)
+    if entry is None:
         return env.failure(name, f"Unknown capability {name!r}",
                            {"type": "UnknownCapability",
                             "message": f"Available: {', '.join(sorted(REGISTRY))}"})
@@ -77,52 +77,41 @@ def _run_capability(name: str, args) -> dict:
                             "message": f"Add \"{name}\" to [audit] capabilities in "
                                        f"site.optimizer.toml to enable it."})
 
-    module = __import__(module_name, fromlist=["run"])
+    module = __import__(entry["module"], fromlist=["run"])
     try:
         result = module.run(cfg, ignore_noindex=args.ignore_noindex)
     except FileNotFoundError as exc:
         return env.failure(name, "Audit could not run", {"type": "MissingInput",
                                                          "message": str(exc)})
 
-    errors = jsonschema.validate(result, json.loads(SCHEMA_PATH.read_text(encoding="utf-8")))
+    errors = jsonschema.validate(result, jsonschema.load_schema(SCHEMA_DIR / entry["schema"]))
     if errors:
         return env.failure(name, "Report failed schema validation",
                            {"type": "SchemaViolation", "message": "\n".join(errors)})
+
+    # Compose everything that can fail *before* writing anything. A run folder is
+    # an append-only observation; an artifact written by a process that then
+    # crashes is a record of the tool's failure, not of the site.
+    summary = result["summary"]
+    critical = summary["total_critical_issues"]
+    warnings = summary["total_warnings"]
+    message = f"{len(result['findings'])} findings: {critical} critical, {warnings} warnings"
 
     written = None
     if not args.dry_run:
         written = report_module.write_run(cfg, result, run=args.run)
 
-    summary = result["summary"]
+    # Only the two severity counters are capability-neutral. Earlier versions of
+    # this message hard-coded `audited_pages`, which only exists in the on-page
+    # summary — a silent assumption that broke the moment a second capability
+    # reported a different shape. Capability counts live in `data.summary`.
     return env.envelope(
-        name, summary["total_critical_issues"] == 0,
-        "Succeeded" if summary["total_critical_issues"] == 0 else "Partial",
-        f"{summary['audited_pages']} pages audited, "
-        f"{summary['total_critical_issues']} critical, {summary['total_warnings']} warnings",
+        name, critical == 0,
+        "Succeeded" if critical == 0 else "Partial",
+        message,
         data={"summary": summary, "findings": result["findings"],
               "run": written["run_dir"].name if written else None,
               "paths": {k: str(v) for k, v in written.items()} if written else None},
-    )
-
-
-def cmd_on_page(args) -> dict:
-    return _run_capability("on-page", args)
-
-
-def cmd_run_all(args) -> dict:
-    """discover -> audit -> compare. Today discover and compare are thin."""
-    results = []
-    for name in REGISTRY:
-        result = _run_capability(name, args)
-        if not result["success"] and result["error"].get("type") == "CapabilityDisabled":
-            continue
-        results.append(result)
-    failures = [r for r in results if not r["success"]]
-    return env.envelope(
-        "run-all", not failures,
-        "Succeeded" if not failures else "Partial",
-        f"{len(results)} capabilities run, {len(failures)} reported findings or errors",
-        data={"results": results},
     )
 
 
@@ -140,14 +129,28 @@ def cmd_validate_report(args) -> dict:
     if not path.is_file():
         return env.failure("validate-report", "Report not found",
                            {"type": "FileNotFound", "message": f"No such file: {path}"})
+    schema_name = args.schema
+    if not schema_name:
+        for entry in REGISTRY.values():
+            candidate = SCHEMA_DIR / entry["schema"]
+            if jsonschema.validate(json.loads(path.read_text(encoding="utf-8")),
+                                   jsonschema.load_schema(candidate)) == []:
+                schema_name = entry["schema"]
+                break
+    if not schema_name:
+        return env.failure("validate-report", "No capability schema matches this report",
+                           {"type": "SchemaMismatch",
+                            "message": f"Pass --schema with one of: "
+                                       f"{', '.join(e['schema'] for e in REGISTRY.values())}"})
     errors = jsonschema.validate(
         json.loads(path.read_text(encoding="utf-8")),
-        json.loads(SCHEMA_PATH.read_text(encoding="utf-8")),
+        jsonschema.load_schema(SCHEMA_DIR / schema_name),
     )
     if errors:
-        return env.failure("validate-report", "Report is not schema valid",
+        return env.failure("validate-report", f"Report is not valid against {schema_name}",
                            {"type": "SchemaViolation", "message": "\n".join(errors)})
-    return env.envelope("validate-report", True, "Succeeded", f"{path.name} is valid", data={})
+    return env.envelope("validate-report", True, "Succeeded",
+                        f"{path.name} is valid against {schema_name}", data={"schema": schema_name})
 
 
 def main(argv=None) -> int:
@@ -167,44 +170,44 @@ def main(argv=None) -> int:
     p_init.add_argument("--force", action="store_true")
     p_init.add_argument("--json", action="store_true")
 
-    p_on = sub.add_parser("on-page", help="Audit on-page signals")
-    common(p_on)
-    p_on.add_argument("--strict", action="store_true", help="Exit 1 on any critical finding")
-    p_on.add_argument("--ignore-noindex", action="store_true",
-                      help="Do not report pages marked noindex")
-    p_on.add_argument("--run", help="Explicit run id (default: UTC timestamp)")
-    p_on.add_argument("--dry-run", action="store_true", help="Audit without writing a run")
-
-    p_all = sub.add_parser("run-all", help="Run every enabled capability")
-    common(p_all)
-    p_all.add_argument("--strict", action="store_true")
-    p_all.add_argument("--ignore-noindex", action="store_true")
-    p_all.add_argument("--run")
-    p_all.add_argument("--dry-run", action="store_true")
+    # One subparser per registered capability, generated from the registry.
+    # A new capability therefore needs no change here — which is the point of
+    # keeping REGISTRY as the single place a capability is declared.
+    for capability in sorted(REGISTRY):
+        cap = sub.add_parser(capability, help=f"Run the {capability} audit")
+        cap.add_argument("--config", help="Path to site.optimizer.toml")
+        cap.add_argument("--workspace", help="Workspace root (default: discovered upwards)")
+        cap.add_argument("--json", action="store_true", help="Emit the structured envelope")
+        cap.add_argument("--strict", action="store_true", help="Exit 1 on any critical finding")
+        cap.add_argument("--ignore-noindex", action="store_true",
+                         help="Do not report pages marked noindex (on-page)")
+        cap.add_argument("--run", help="Explicit run id (default: UTC timestamp)")
+        cap.add_argument("--dry-run", action="store_true", help="Audit without writing a run")
 
     p_runs = sub.add_parser("runs", help="List stored runs for the configured site")
-    common(p_runs)
+    p_runs.add_argument("--config")
+    p_runs.add_argument("--workspace")
+    p_runs.add_argument("--json", action="store_true")
 
-    p_val = sub.add_parser("validate-report", help="Validate a report against the schema")
+    p_val = sub.add_parser("validate-report", help="Validate a report against its schema")
     p_val.add_argument("report")
+    p_val.add_argument("--schema", help="Schema file name; autodetected when omitted")
     p_val.add_argument("--json", action="store_true")
 
     handlers = {
         "init-site": cmd_init_site,
-        "on-page": cmd_on_page,
-        "run-all": cmd_run_all,
         "runs": cmd_runs,
         "validate-report": cmd_validate_report,
     }
     args = parser.parse_args(argv)
-    result = handlers[args.command](args)
+    handler = handlers.get(args.command)
+    result = _run_capability(args.command, args) if handler is None else handler(args)
     env.emit(result, getattr(args, "json", False))
 
     critical = 0
-    if args.command in ("on-page", "run-all") and not getattr(args, "dry_run", False):
+    if args.command in REGISTRY and not getattr(args, "dry_run", False):
         data = result.get("data") or {}
-        summary = data.get("summary") or {}
-        critical = summary.get("total_critical_issues", 0)
+        critical = (data.get("summary") or {}).get("total_critical_issues", 0)
         if data.get("results"):
             for entry in data["results"]:
                 critical += ((entry.get("data") or {}).get("summary") or {}).get(

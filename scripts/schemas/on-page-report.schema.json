@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martinderm/website-optimizer/schemas/on-page-report.schema.json",
+  "title": "On-Page Audit Report",
+  "type": "object",
+  "allOf": [
+    {"$ref": "report-base.schema.json"},
+    {
+      "type": "object",
+      "required": ["source", "summary", "pages"],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"const": "static_dir"},
+            "path": {"type": ["string", "null"]}
+          }
+        },
+        "summary": {
+          "type": "object",
+          "required": [
+            "total_html_files", "audited_pages", "ignored_pages", "clean_pages",
+            "pages_with_findings", "total_critical_issues", "total_warnings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "total_html_files": {"type": "integer", "minLength": 0},
+            "audited_pages": {"type": "integer", "minLength": 0},
+            "ignored_pages": {"type": "integer", "minLength": 0},
+            "clean_pages": {"type": "integer", "minLength": 0},
+            "pages_with_findings": {"type": "integer", "minLength": 0},
+            "total_critical_issues": {"type": "integer", "minLength": 0},
+            "total_warnings": {"type": "integer", "minLength": 0}
+          }
+        },
+        "pages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["source", "title", "canonical", "description_length", "og_image", "schemas", "h1_count"],
+            "additionalProperties": false,
+            "properties": {
+              "source": {"type": "string"},
+              "title": {"type": "string"},
+              "canonical": {"type": ["string", "null"]},
+              "description_length": {"type": "integer", "minLength": 0},
+              "og_image": {"type": ["string", "null"]},
+              "schemas": {"type": "array", "items": {"type": "string"}},
+              "h1_count": {"type": "integer", "minLength": 0}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -15,27 +15,25 @@ description: >-
 
 ## Status
 
-**Round 3b of 4 — references, tooling, and system map in place.**
+**Round 4 in progress — two capabilities working.**
 
-`references/`, `scripts/` and `docs/system-map/` all exist.
-
-`on-page` audits a static output directory and writes an append-only evidence
-run. The reference set carries the rules, each with a source and a support level;
-`sources.md` records which sources were actually read and which were inherited
-from a workspace document.
+`on-page` audits a static output directory; `redirects` probes live redirect
+rules. Both write append-only evidence runs. The reference set is complete and
+`docs/system-map/` maps the tool contracts.
 
 Before changing anything in `scripts/`, read
 [`docs/system-map/`](docs/system-map/README.md): it maps the tool contracts and
 says what a given change hits and what it does not.
 
-Round 4 adds the remaining capabilities: `redirects`, `images`, `schema`,
-`compare`, and live crawling.
+Still to come: `images`, `schema`, `compare`, and live page rendering via
+`playwright-cli`.
 
 ## Quick start
 
 ```
 python scripts/wo.py init-site --site-url https://example.com
-python scripts/wo.py on-page              # audit, write one evidence run
+python scripts/wo.py on-page              # static output, one evidence run
+python scripts/wo.py redirects             # live redirect rules
 python scripts/wo.py runs                 # list stored runs
 python scripts/wo.py on-page --dry-run    # audit, write nothing
 ```
@@ -64,7 +62,8 @@ question, pointing at one file. It is filled in as the references land.
 | Static generator specifics (robots layout, sitemap config, build output) | `references/static-sites.md` |
 | Dynamic CMS specifics (plugins, WP-CLI, cache, archives) | `references/dynamic-sites.md` |
 | Where a rule came from, and how strong it is | `references/sources.md` |
-| Run an audit, read a report | `scripts/README.md`, `capabilities/on_page/README.md` |
+| Run an audit, read a report | `scripts/README.md` |
+| Which checks exist, and what each means | `scripts/wo/capabilities/*/README.md` |
 
 ## Not this skill
 

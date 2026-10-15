@@ -14,28 +14,45 @@ Das Artefakt eines Laufs: Findings und Zusammenfassung, gegen ein eigenes Schema
 validiert.
 
 ## Why this shape
-Zwei Entscheidungen stecken darin. Erstens sind Findings **atomar** — `rule_id`,
-`observed`, `expected`, `page`, `location` statt zweier lose String-Listen. Damit
-ist ein Befund prüfbar, ohne die Seite erneut zu laden, und ein Urteil lässt sich
-aus den Befunden ableiten statt in ihnen zu stehen (D15). Zweitens ist das Schema
-eine Datei und keine Prosa: `validate-report` prüft sie maschinell, und
-`_run_capability` verweigert das Schreiben, wenn die Validierung fehlschlägt.
+Drei Entscheidungen stecken darin.
+
+**Findings sind atomar** — `rule_id`, `observed`, `expected`, `subject`,
+`location` statt zweier lose String-Listen. Damit ist ein Befund prüfbar, ohne
+die Seite erneut zu laden, und ein Urteil lässt sich aus den Befunden ableiten
+statt in ihnen zu stehen (D15).
+
+**Das Schema ist eine Datei und keine Prosa.** `validate-report` prüft sie
+maschinell, und `_run_capability` verweigert das Schreiben, wenn die Validierung
+fehlschlägt.
+
+**Es gibt eine Basis und Capability-Erweiterungen.** `report-base.schema.json`
+trägt, was jeder Report braucht (`report_version`, `tool`, `crawl_mode`, `site`,
+`findings`). Jede Capability hat ein eigenes Schema, das per `allOf` einbindet.
+Der Auslöser war die zweite Capability: eine `summary`-Struktur für `on-page`
+ließ sich nicht auf `redirects` anwenden, ohne entweder eine gemeinsame
+Superstruktur zu erfinden oder genau die Kopplung zu bauen, die das Skill-Projekt
+vermeiden sollte (D23).
 
 `additionalProperties: false` auf allen Ebenen. Ein Report mit unbekanntem Feld
 ist ein Report auf einem anderen Stand, und das soll auffallen.
 
 ## Shape
-`scripts/schemas/audit-report.schema.json` — Pflichtfelder: `report_version`,
-`tool`, `generated_at`, `crawl_mode`, `site`, `source`, `summary`, `pages`,
-`findings`. `crawl_mode` ist `enum [static, live]`; `severity` in Findings ist
-`enum [critical, warning]`; `observed` und `expected` sind bewusst untypisiert,
-weil der beobachtete Wert je nach Regel Boolean, Integer oder String ist.
+`scripts/schemas/report-base.schema.json` — gemeinsame Pflichtfelder und die
+Finding-Definition. `subject` heißt so statt `page`, weil nicht jede Capability
+über Seiten spricht: ein Redirect-Befund hat eine Quelle, keine Seite.
 
-Validierung: `scripts/wo/jsonschema.py` (Untermenge, siehe dort `SUPPORTED`).
-`_run_capability` ruft `jsonschema.validate` vor `write_run`.
+`scripts/schemas/on-page-report.schema.json` — `source.kind: static_dir`,
+`summary` mit `audited_pages`, `pages[]`.
+`scripts/schemas/redirects-report.schema.json` — `source.kind: redirect_file`,
+`summary` mit `passed`/`failed`, `checks[]` (eine Zeile pro geprüfter Regel).
 
-- [scripts/schemas/audit-report.schema.json](../../../scripts/schemas/audit-report.schema.json)
-- [scripts/wo/jsonschema.py](../../../scripts/wo/jsonschema.py) — `:23` (SUPPORTED, die abgedeckte Untermenge), `:52` (validate), `:109` (assert_valid)
+`scripts/wo/jsonschema.py:52` `validate`, `:109` `assert_valid`, `:23`
+`SUPPORTED`, dazu `load_schema` für `$ref`-Auflösung.
+
+- [scripts/schemas/report-base.schema.json](../../../scripts/schemas/report-base.schema.json)
+- [scripts/schemas/on-page-report.schema.json](../../../scripts/schemas/on-page-report.schema.json)
+- [scripts/schemas/redirects-report.schema.json](../../../scripts/schemas/redirects-report.schema.json)
+- [scripts/wo/jsonschema.py](../../../scripts/wo/jsonschema.py) — `:23` (SUPPORTED), `:52` (validate)
 
 ## Connected to
 Gehört zu [Envelope](envelope.md), [On-Page](on-page.md), [Receipt](receipt.md). Prozesse: [Audit-Statisch](../processes/audit-static.md), [Baseline-Vergleich](../processes/compare-baseline.md).

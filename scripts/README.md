@@ -17,13 +17,16 @@ scripts: two entry points drift apart, and running `wo.py` puts this directory o
 | Command | Purpose |
 |---|---|
 | `init-site` | write a `site.optimizer.toml` for a site |
-| `on-page` | audit on-page signals, write one evidence run |
-| `run-all` | run every enabled capability in order |
+| `on-page` | audit on-page signals in a static output directory |
+| `redirects` | probe live redirect rules against the running site |
 | `runs` | list stored runs for the configured site |
-| `validate-report` | validate a report against `schemas/audit-report.schema.json` |
+| `validate-report` | validate a report; the matching capability schema is autodetected |
 
-Common flags: `--config`, `--workspace`, `--json`. Audit commands add `--strict`,
-`--ignore-noindex`, `--run`, `--dry-run`.
+Common flags: `--config`, `--workspace`, `--json`. Capability commands add
+`--strict`, `--run`, `--dry-run`, and `--ignore-noindex` (`on-page`).
+
+Capability subparsers are generated from `REGISTRY`, so registering a capability
+is the only step needed to expose it on the command line.
 
 ## Configuration
 
@@ -49,14 +52,23 @@ wo/
   report.py               run folders, atomic writes, data-zone receipts
   jsonschema.py           dependency-free validator for the schema subset used
   capabilities/
-    on_page/              one capability, one folder
+    on_page/              static output analysis
+    redirects/            live rule verification
 schemas/
-  audit-report.schema.json
-tests/                    stdlib unittest, including parity against the original
+  report-base.schema.json     fields every report carries
+  on-page-report.schema.json  extends the base
+  redirects-report.schema.json extends the base
+tests/                    stdlib unittest, including parity against the originals
 ```
 
 `capabilities/on_page/` carries an underscore while the command is `on-page`: a
 hyphen is a fine command name and an invalid Python identifier.
+
+## Network
+
+`redirects` performs live HTTP requests; `on-page` does not. A capability that
+reaches the network is marked `crawl_mode: live` in its report, because a live
+result and a static one are not comparable.
 
 ## Where output goes
 

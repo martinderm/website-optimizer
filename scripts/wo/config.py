@@ -40,6 +40,11 @@ class SiteConfig:
     owner: str = ""
     retention_class: str = "audit-run"
     capabilities: list[str] = field(default_factory=lambda: ["on-page"])
+    redirects: dict = field(default_factory=lambda: {
+        "file": "static/.htaccess",
+        "check_target": True,
+        "timeout": 10,
+    })
 
     @property
     def classification(self) -> str:
@@ -146,7 +151,23 @@ def load(path: Path | None = None, workspace_root: Path | None = None) -> SiteCo
         owner=str(audit.get("owner", "")) or root.name,
         retention_class=str(audit.get("retention_class", "audit-run")),
         capabilities=list(audit.get("capabilities", ["on-page"])),
+        redirects=_redirect_settings(data),
     )
+
+
+def _redirect_settings(data: dict) -> dict:
+    """`[redirects]` block with defaults and a validated timeout."""
+    section = data.get("redirects", {})
+    timeout = section.get("timeout", 10)
+    if not isinstance(timeout, int) or isinstance(timeout, bool) or timeout <= 0:
+        raise ConfigError(
+            f"[redirects] timeout must be a positive integer, got {timeout!r}."
+        )
+    return {
+        "file": str(section.get("file", "static/.htaccess")),
+        "check_target": _as_bool(section.get("check_target", True), "redirects.check_target"),
+        "timeout": timeout,
+    }
 
 
 TEMPLATE = """\
@@ -173,4 +194,11 @@ contacted_private_surface = false
 # retention_class "audit-run" keeps this run; "crawl-ephemeral" applies to raw
 # crawl output under data/, which is regenerable and may be deleted freely.
 retention_class = "audit-run"
+
+# Redirect rules are verified live, so this capability needs [redirects].
+# Add "redirects" to capabilities above to switch it on.
+[redirects]
+file = "static/.htaccess"
+check_target = true
+timeout = 10
 """

@@ -60,7 +60,7 @@ def _triples_from_new(static_dir: Path) -> set[tuple[str, str, str]]:
         workspace_root=static_dir.parent,
     )
     report = run(config)
-    return {(f["page"], f["severity"], f["message"]) for f in report["findings"]}
+    return {(f["subject"], f["severity"], f["message"]) for f in report["findings"]}
 
 
 @unittest.skipUnless(ORIGINAL.is_file(), "reference implementation has been removed")

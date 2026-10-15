@@ -22,7 +22,7 @@ from typing import Any
 
 SUPPORTED = (
     "type", "required", "properties", "additionalProperties", "enum", "const",
-    "items", "pattern", "minLength", "allOf", "if", "then",
+    "items", "pattern", "minLength", "allOf", "if", "then", "$ref",
 )
 
 _PY_TYPES = {
@@ -32,6 +32,49 @@ _PY_TYPES = {
     "boolean": bool,
     "null": type(None),
 }
+
+
+def inline_refs(schema: dict[str, Any], loader, _seen: frozenset = frozenset()) -> dict[str, Any]:
+    """Resolve local `$ref`s by loading and inlining them.
+
+    Capability reports share a base schema, so a local reference is the cheapest
+    way to state that once. References are inlined rather than resolved at
+    validation time because this validator has no document root to resolve
+    against. A reference cycle is an error, not something to silently truncate.
+    """
+    if isinstance(schema, list):
+        return [inline_refs(item, loader, _seen) for item in schema]
+    if not isinstance(schema, dict):
+        return schema
+
+    ref = schema.get("$ref")
+    if ref is not None:
+        if ref in _seen:
+            raise ValueError(f"Circular $ref detected: {ref}")
+        target = loader(ref)
+        merged = inline_refs(target, loader, _seen | {ref})
+        extra = {k: v for k, v in schema.items() if k != "$ref"}
+        if extra:
+            merged = {**merged, **extra}
+        return merged
+
+    return {k: inline_refs(v, loader, _seen) for k, v in schema.items()}
+
+
+def load_schema(path) -> dict[str, Any]:
+    """Load a capability schema from disk with its local refs resolved."""
+    import json
+    from pathlib import Path
+
+    base = Path(path)
+
+    def loader(ref: str) -> dict[str, Any]:
+        target = (base.parent / ref).resolve()
+        if not target.is_file():
+            raise ValueError(f"Schema reference not found: {ref} (from {base.name})")
+        return json.loads(target.read_text(encoding="utf-8"))
+
+    return inline_refs(json.loads(base.read_text(encoding="utf-8")), loader)
 
 
 def _type_ok(value: Any, expected: str) -> bool:
