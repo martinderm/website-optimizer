@@ -31,6 +31,17 @@ REPORT_VERSION = "1"
 REDIRECT_CODES = (301, 302, 307, 308)
 USER_AGENT = "Mozilla/5.0 (compatible; website-optimizer/0.2; +redirect-audit)"
 
+# Rule ids this capability can emit, whether or not they fired. See the note in
+# the on-page capability: a report that lists only failures cannot distinguish
+# "nothing is broken" from "this check did not run".
+CHECKS: tuple[str, ...] = (
+    "redirect.location_mismatch",
+    "redirect.status_unexpected",
+    "redirect.unreachable",
+    "redirect.target_unreachable",
+    "redirect.failed",
+)
+
 
 class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
     """Surface redirects instead of following them."""
@@ -199,7 +210,9 @@ def run(config, **_ignored) -> dict[str, Any]:
         # make a later comparison silently meaningless.
         "crawl_mode": "live",
         "site": {"url": base, "domain": config.domain},
+        "capability": "redirects",
         "source": {"kind": "redirect_file", "path": _display_path(redirect_file, config)},
+        "rules_run": list(CHECKS),
         "summary": {
             "total_tested": len(checks),
             "passed": passed,

@@ -18,6 +18,8 @@ directory layout into every fork of the workspace.
 from __future__ import annotations
 
 import tomllib
+
+from .errors import ConfigError
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -52,8 +54,7 @@ class SiteConfig:
         return "confidential" if self.contacted_private_surface else self.data_classification
 
 
-class ConfigError(Exception):
-    """Raised with a self-correcting message, never a bare KeyError."""
+
 
 
 def find_workspace_root(start: Path | None = None) -> Path:

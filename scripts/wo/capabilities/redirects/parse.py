@@ -17,13 +17,14 @@ import json
 import re
 from pathlib import Path
 
+from ...errors import MappingError
+
 Mapping = tuple[str, str, bool]
 
 REDIRECT_STATUSES = ("r=301", "r=308", "r=302")
 
 
-class MappingError(Exception):
-    """Raised with a self-correcting message, never a bare OSError."""
+
 
 
 def clean_regex_to_path(pattern: str) -> tuple[str, str, bool]:

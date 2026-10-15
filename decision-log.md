@@ -500,3 +500,58 @@ such orphan runs were produced during development and removed rather than kept.
 
 **Consequence:** a run folder exists only if the run completed. Failure leaves no
 trace in the evidence zone; the failure is visible in the envelope instead.
+
+## D25 — `compare` never refuses; it attributes every difference
+
+**Date:** 2026-10-15
+**Status:** accepted
+**support_level:** fully_supported
+
+A comparison always runs. Every difference is classified as `regression`,
+`improvement`, `check-change`, or `site-change`. A provenance difference (tool
+version or crawl mode) is reported as a qualifier on the comparison, never used
+as a filter.
+
+**Reason.** The strict alternative — refuse to compare when `source_version`
+differs — was considered and rejected on its own merits: the tool version changes
+on every release, so the comparison would refuse exactly when it is wanted, and
+silence is the worse failure. Attribution is what makes tolerance safe:
+without knowing which rules ran, "a rule was added" and "the site broke" are the
+same observation.
+
+**Consequence.** Reports carry `rules_run` — every rule id a capability can emit,
+fired or not — because `check-change` cannot be detected without it. A test
+enforces that the declared set matches the rules in both directions. A baseline
+without `rules_run` falls back to severity rather than guessing `check-change`,
+since guessing would swallow every regression against an older run. `compare` is
+a meta capability: it is not enabled per site, because enabling it changes what
+the tool can do, not what the site looks like.
+
+## D26 — Live page rendering is an on-request diagnostic, not a check
+
+**Date:** 2026-10-15
+**Status:** accepted
+**support_level:** partially_supported
+**references:**
+  - `../playwright-cli/SKILL.md` (session handling, `--raw`, page-content rule)
+  - [performance.md](../../../references/performance.md) (LCP, Core Web Vitals)
+
+Not yet implemented. When it is, it runs only when asked for — never from a hook,
+never in CI.
+
+**Reason.** Four independent reasons converge, and the last one is decisive:
+(a) a browser crawl costs minutes where a static audit costs seconds; (b) browser
+sessions are a shared resource and two harnesses in one workspace collide — the
+`playwright-cli` skill says so explicitly; (c) results depend on viewport,
+consent state and cookie banners, so a hook would fail intermittently, and an
+intermittently failing hook gets disabled, which is worse than no hook;
+(d) a crawl of a site behind a consent wall finds the wall on every page and
+reports it as the page's content — consistently wrong in a way that looks real.
+
+**Consequence.** `on-page` against build output and `redirects` are the hook-
+grade checks: fast, deterministic, and a failed run means something. The live
+crawl answers a question a person asked. Its report is marked `crawl_mode: live`,
+which `compare` reports rather than filters.
+
+**Support caveat:** partially supported until the capability exists and its
+runtime is measured on a real site.

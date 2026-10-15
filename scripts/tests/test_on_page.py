@@ -8,7 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from wo.capabilities.on_page.audit import RULES, audit_page  # noqa: E402
+from wo.capabilities.on_page.audit import CHECKS, RULES, audit_page, run  # noqa: E402
+from wo.config import SiteConfig  # noqa: E402
 from wo.page import extract_page  # noqa: E402
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "site" / "public"
@@ -27,6 +28,50 @@ class RuleTest(unittest.TestCase):
 
     def test_all_rules_are_registered(self):
         self.assertEqual(len(RULES), 10)
+
+    def test_checks_covers_every_rule_the_capability_can_emit(self):
+        """`rules_run` is only trustworthy if it matches the rules.
+
+        A rule missing from CHECKS would be invisible to `compare`, which
+        attributes a difference to a check change only when the rule set says
+        so. A stale CHECKS entry is just as wrong.
+        """
+        emitted = set()
+        page = extract_page(FIXTURES / "index.html")
+        for mutate in (
+            lambda p: None,
+            lambda p: setattr(p, "lang", None),
+            lambda p: setattr(p, "title", ""),
+            lambda p: setattr(p, "description", "kurz"),
+            lambda p: setattr(p, "description", "x" * 400),
+            lambda p: setattr(p, "description", None),
+            lambda p: setattr(p, "canonical", None),
+            lambda p: setattr(p, "canonical", "https://other.example/"),
+            lambda p: setattr(p, "h1_count", 0),
+            lambda p: setattr(p, "h1_count", 4),
+            lambda p: setattr(p, "og", {}),
+            lambda p: setattr(p, "twitter", {}),
+            lambda p: (setattr(p, "has_main", False), setattr(p, "has_skip_link", False)),
+            lambda p: setattr(p, "images_missing_alt", 3),
+            lambda p: setattr(p, "robots", "noindex"),
+        ):
+            fresh = extract_page(FIXTURES / "index.html")
+            mutate(fresh)
+            emitted |= {f["rule_id"] for f in audit_page(fresh, SITE)}
+
+        self.assertEqual(emitted - set(CHECKS), set(),
+                         "a rule emits an id that CHECKS does not declare")
+        self.assertEqual(set(CHECKS) - emitted, set(),
+                         "CHECKS declares a rule that can never fire")
+
+    def test_report_declares_the_rule_set_it_ran(self):
+        config = SiteConfig(
+            site_url=SITE, domain="example.com",
+            static_dir=FIXTURES, workspace_root=FIXTURES.parent,
+        )
+        report = run(config)
+        self.assertEqual(set(report["rules_run"]), set(CHECKS))
+        self.assertEqual(report["capability"], "on-page")
 
     def test_page_with_findings(self):
         findings = audit_page(self.index, SITE)

@@ -177,6 +177,23 @@ RULES: tuple[Callable[..., list[dict]], ...] = (
     robots_noindex,
 )
 
+# Every rule_id this capability can emit, whether or not it fired. A report that
+# lists only failures cannot tell "the page is clean" apart from "this check did
+# not run" — and `compare` needs exactly that distinction to tell a new rule
+# from a broken page. Maintained with RULES; a test enforces the agreement.
+CHECKS: tuple[str, ...] = (
+    "title.missing",
+    "description.missing", "description.short", "description.long",
+    "canonical.missing", "canonical.mismatch",
+    "lang.missing",
+    "h1.missing", "h1.multiple",
+    "og.title.missing", "og.image.missing", "og.description.missing",
+    "twitter.card.missing",
+    "main.missing", "skiplink.missing",
+    "img.alt.missing",
+    "robots.noindex",
+)
+
 
 def audit_page(page: Page, site_url: str, ignore_noindex: bool = False) -> list[dict]:
     """Run every rule against one page and return atomic findings."""
@@ -247,7 +264,9 @@ def run(config, ignore_noindex: bool = False, pages: list[Path] | None = None) -
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "crawl_mode": config.crawl_mode,
         "site": {"url": config.site_url, "domain": config.domain},
+        "capability": "on-page",
         "source": {"kind": "static_dir", "path": _relative(target, config.workspace_root)},
+        "rules_run": list(CHECKS),
         "summary": {
             "total_html_files": len(html_files),
             "audited_pages": audited,

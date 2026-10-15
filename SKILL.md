@@ -25,8 +25,8 @@ Before changing anything in `scripts/`, read
 [`docs/system-map/`](docs/system-map/README.md): it maps the tool contracts and
 says what a given change hits and what it does not.
 
-Still to come: `images`, `schema`, `compare`, and live page rendering via
-`playwright-cli`.
+Still to come: `images`, `schema`, and live page rendering via`playwright-cli` (on
+request only, never from a hook).
 
 ## Quick start
 
@@ -34,6 +34,7 @@ Still to come: `images`, `schema`, `compare`, and live page rendering via
 python scripts/wo.py init-site --site-url https://example.com
 python scripts/wo.py on-page              # static output, one evidence run
 python scripts/wo.py redirects             # live redirect rules
+python scripts/wo.py compare               # attribute what changed since the last run
 python scripts/wo.py runs                 # list stored runs
 python scripts/wo.py on-page --dry-run    # audit, write nothing
 ```

@@ -137,13 +137,14 @@ def build_receipt(report: dict[str, Any], config, run: str) -> dict[str, Any]:
     }
 
 
-def write_run(config, report: dict[str, Any], run: str | None = None) -> dict[str, Path]:
-    """Write report.json and receipt.json into this run's evidence folder."""
+def write_run(config, report: dict[str, Any], run: str | None = None,
+              filename: str = "report.json") -> dict[str, Path]:
+    """Write a run's artifact and its receipt into this run's evidence folder."""
     run = run or run_id()
     target = runs_dir(config.workspace_root, config.domain) / run
 
     report_path = atomic_write(
-        target / "report.json",
+        target / filename,
         json.dumps(report, indent=2, ensure_ascii=False) + "\n",
     )
     receipt = build_receipt(report, config, run)

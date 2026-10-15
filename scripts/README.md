@@ -54,10 +54,12 @@ wo/
   capabilities/
     on_page/              static output analysis
     redirects/            live rule verification
+    compare/             difference attribution between runs
 schemas/
   report-base.schema.json     fields every report carries
   on-page-report.schema.json  extends the base
   redirects-report.schema.json extends the base
+  compare-report.schema.json   extends the base
 tests/                    stdlib unittest, including parity against the originals
 ```
 

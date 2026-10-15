@@ -20,6 +20,17 @@ REGISTRY = {
         "module": "wo.capabilities.redirects.audit",
         "schema": "redirects-report.schema.json",
     },
+    # `compare` reads stored runs instead of auditing, so it is a workspace
+    # operation rather than something a site opts into. Enabling it per site
+    # would be paperwork with no meaning: it changes what the tool can do, not
+    # what this site looks like.
+    "compare": {
+        "module": "wo.capabilities.compare.audit",
+        "schema": "compare-report.schema.json",
+        "meta": True,
+    },
 }
 
-__all__ = ["REGISTRY"]
+META = {name for name, entry in REGISTRY.items() if entry.get("meta")}
+
+__all__ = ["REGISTRY", "META"]

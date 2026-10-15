@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martinderm/website-optimizer/schemas/compare-report.schema.json",
+  "title": "Run Comparison Report",
+  "type": "object",
+  "allOf": [
+    {"$ref": "report-base.schema.json"},
+    {
+      "type": "object",
+      "required": ["baseline", "current", "provenance_changed", "compared", "summary", "differences"],
+      "properties": {
+        "baseline": {
+          "type": "object",
+          "required": ["run"],
+          "additionalProperties": false,
+          "properties": {"run": {"type": "string", "minLength": 1}}
+        },
+        "current": {
+          "type": "object",
+          "required": ["run"],
+          "additionalProperties": false,
+          "properties": {"run": {"type": "string", "minLength": 1}}
+        },
+        "provenance_changed": {
+          "type": "array",
+          "description": "Capabilities whose tool version or crawl mode differs. Reported, never used as a filter — the comparison always runs.",
+          "items": {"type": "string"}
+        },
+        "compared": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["capability", "baseline_version", "current_version"],
+            "additionalProperties": false,
+            "properties": {
+              "capability": {"type": "string"},
+              "baseline_version": {"type": ["string", "null"]},
+              "current_version": {"type": ["string", "null"]}
+            }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "required": [
+            "compared_capabilities", "regression", "improvement",
+            "check-change", "site-change", "total_critical_issues", "total_warnings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "compared_capabilities": {"type": "integer", "minLength": 0},
+            "regression": {"type": "integer", "minLength": 0},
+            "improvement": {"type": "integer", "minLength": 0},
+            "check-change": {"type": "integer", "minLength": 0},
+            "site-change": {"type": "integer", "minLength": 0},
+            "total_critical_issues": {"type": "integer", "minLength": 0},
+            "total_warnings": {"type": "integer", "minLength": 0}
+          }
+        },
+        "differences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind", "rule_id", "subject", "severity",
+              "baseline_severity", "current_severity", "message", "capability"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {"enum": ["regression", "improvement", "check-change", "site-change"]},
+              "rule_id": {"type": ["string", "null"]},
+              "subject": {"type": ["string", "null"]},
+              "severity": {"type": ["string", "null"]},
+              "baseline_severity": {"type": ["string", "null"]},
+              "current_severity": {"type": ["string", "null"]},
+              "message": {"type": "string"},
+              "capability": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  ]
+}

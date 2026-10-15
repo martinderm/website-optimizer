@@ -25,7 +25,8 @@ from wo import config as config_module           # noqa: E402
 from wo import envelope as env                   # noqa: E402
 from wo import jsonschema                        # noqa: E402
 from wo import report as report_module           # noqa: E402
-from wo.capabilities import REGISTRY              # noqa: E402
+from wo.capabilities import META, REGISTRY       # noqa: E402
+from wo.errors import CapabilityError      # noqa: E402
 
 SCHEMA_DIR = Path(__file__).resolve().parent / "schemas"
 
@@ -71,18 +72,26 @@ def _run_capability(name: str, args) -> dict:
     if failure:
         return failure
 
-    if name not in cfg.capabilities:
+    if name not in META and name not in cfg.capabilities:
         return env.failure(name, f"Capability {name!r} is not enabled for this site",
                            {"type": "CapabilityDisabled",
                             "message": f"Add \"{name}\" to [audit] capabilities in "
                                        f"site.optimizer.toml to enable it."})
 
     module = __import__(entry["module"], fromlist=["run"])
+    # `compare` consumes stored runs rather than auditing, so it takes run ids
+    # instead of doing work. Every other capability ignores unknown keywords.
+    kwargs = {"ignore_noindex": getattr(args, "ignore_noindex", False)}
+    if name == "compare":
+        kwargs.update({
+            "baseline": getattr(args, "baseline", None),
+            "current": getattr(args, "current", None),
+        })
     try:
-        result = module.run(cfg, ignore_noindex=args.ignore_noindex)
-    except FileNotFoundError as exc:
-        return env.failure(name, "Audit could not run", {"type": "MissingInput",
-                                                         "message": str(exc)})
+        result = module.run(cfg, **kwargs)
+    except CapabilityError as exc:
+        return env.failure(name, "Audit could not run",
+                           {"type": exc.kind, "message": str(exc)})
 
     errors = jsonschema.validate(result, jsonschema.load_schema(SCHEMA_DIR / entry["schema"]))
     if errors:
@@ -99,7 +108,8 @@ def _run_capability(name: str, args) -> dict:
 
     written = None
     if not args.dry_run:
-        written = report_module.write_run(cfg, result, run=args.run)
+        filename = "comparison.json" if name == "compare" else "report.json"
+        written = report_module.write_run(cfg, result, run=args.run, filename=filename)
 
     # Only the two severity counters are capability-neutral. Earlier versions of
     # this message hard-coded `audited_pages`, which only exists in the on-page
@@ -183,6 +193,9 @@ def main(argv=None) -> int:
                          help="Do not report pages marked noindex (on-page)")
         cap.add_argument("--run", help="Explicit run id (default: UTC timestamp)")
         cap.add_argument("--dry-run", action="store_true", help="Audit without writing a run")
+        if capability == "compare":
+            cap.add_argument("--baseline", help="Baseline run id (default: the previous run)")
+            cap.add_argument("--current", help="Run id to compare against the baseline")
 
     p_runs = sub.add_parser("runs", help="List stored runs for the configured site")
     p_runs.add_argument("--config")

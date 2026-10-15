@@ -1,8 +1,8 @@
 ---
 type: process
-universe: ghost
-status: stub
-entity: (geplant, nicht implementiert)
+universe: live
+status: verified
+entity: scripts/wo/capabilities/compare/audit.py
 verified_at: 2026-10-15
 revision: a2dda236b34e6222be84c6068d84203f340219a8
 consumes:
@@ -14,45 +14,68 @@ produces:
 
 # Baseline-Vergleich
 
-**Ghost.** Diese Karte beschreibt eine Bewegung, die noch nicht existiert. Sie
-ist hier, damit der geplante Vertrag feststeht und nicht später erfunden wird —
-und damit niemand gegen sie implementiert, ohne sie zur `live` zu machen.
-
 ## Input → Movement → Output
 
-**Input:** zwei Läufe desselben Workspace und derselben Domain; der spätere ist
-der aktuelle, der frühere die Referenz.
+**Input:** zwei Läufe desselben Workspace und derselben Domain, die mindestens eine
+Capability gemeinsam haben.
 
-**Movement:** beide Reports werden gegen das gemeinsame Schema validiert, ihre
-Receipts werden auf vergleichbare Provenienz geprüft, und die Befundmengen werden
-über `rule_id` + `page` verglichen. Jede Differenz wird als eigene
-Vergleichsaussage ausgegeben, nicht als überschriebener Report.
+**Movement:** beide Laufordner werden gelesen und nach Capability geordnet. Für jede
+gemeinsame Capability werden die Befundmengen über `(rule_id, subject)` verglichen
+und jede Differenz einem Grund zugeordnet — Regression, Verbesserung,
+Prüfänderung oder Änderung der Site.
 
-**Output:** ein Vergleichsartefakt in einem neuen Laufordner. Der frühere Lauf
-bleibt unverändert.
+**Output:** `comparison.json` in einem **eigenen** neuen Laufordner, mit Receipt.
+Die verglichenen Läufe bleiben unverändert.
 
 ## Why this shape
-Evidence ist append-only, also wird auch ein Vergleich als *eigener* Lauf
-geschrieben und nicht durch Überschreiben des letzten erzeugt. Sonst wäre die
-Historie, die `compare` erzeugen soll, genau die, die man dabei verliert.
+**Nie verweigern, immer begründen.** Der naheliegende Entwurf wäre, bei
+abweichender `source_version` gar nicht zu vergleichen. Das taugt nicht: die
+Werkzeugversion ändert sich bei jedem Release, also würde genau dann nicht
+verglichen, wenn man es braucht. Eine Abweichung der Provenienz ist deshalb eine
+*Angabe zum Vergleich*, kein Filter.
 
-## Offene Entscheidungen vor der Implementierung
+Die Prüfänderung ist der eigentliche Grund für die Klassifikation. Ohne die
+Menge der gelaufenen Regeln ist „neue Regel ergänzt" nicht von „Seite kaputt"
+zu unterscheiden — und genau diese Verwechslung macht ein Vergleichstool
+unbrauchbar.
 
-- **Provenienz-Vergleich.** Ein Live-Crawl ist nicht deterministisch. Ohne
-  Vergleich von `source_version` und `crawl_mode` meldet `compare` Unterschiede,
-  die nie Änderungen an der Site waren. Ohne Vergleich meldet es wiederum echte
-  Änderungen nicht. Diese Karte bleibt `stub`, bis die Regel feststeht.
-- **Eignungsregel.** Welche Differenzen zählen als Regression? Ein neu
-  aufgetretener `critical`-Befund sicher; eine entfernte `warning` sollte kein
-  Feiergrund im Report sein.
-- **Erfolgsfall.** Was passiert, wenn keine einzige Referenz existiert? Vorgeschlagen: Vergleich überspringen und im Envelope als `Partial` mit Begründung melden, nicht als Erfolg.
+## Die vier Klassen
+
+| Klasse | Bedingung |
+|---|---|
+| `regression` | `critical` neu, oder Schweregrad verschlechtert |
+| `improvement` | Befund verschwunden, Regel existiert weiterhin |
+| `check-change` | `rule_id` nur in einer der beiden Regelmengen |
+| `site-change` | gleiche Regeln, Befund hinzugekommen oder weg mit gesunkener Schwere |
+
+Eine Baseline **ohne** `rules_run` fällt bewusst auf die Schweregrad-Regel
+zurück: „Prüfänderung" zu raten würde jede echte Regression gegen einen älteren
+Lauf verschlucken.
+
+## Steps
+
+1. `run` bestimmt den aktuellen Lauf zuerst und sucht die Baseline dahinter.
+   Umgekehrt aufgelöst vergleicht ein Lauf mit sich selbst.
+   — [scripts/wo/capabilities/compare/audit.py](../../../scripts/wo/capabilities/compare/audit.py)
+2. `pick_baseline` überspringt Läufe ohne gemeinsame Capability — Capabilities
+   laufen nicht alle bei jedem Durchlauf.
+   — `scripts/wo/capabilities/compare/audit.py`
+3. `_reports_by_capability` erkennt ältere Reports ohne `capability`-Feld über
+   `source.kind` und Befunde ohne `subject` über das frühere `page`.
+   — `scripts/wo/capabilities/compare/audit.py`
+4. `classify` attribuiert jede Differenz; Regressionen werden zusätzlich als
+   Befunde ausgegeben, damit `--strict` unverändert funktioniert.
+   — `scripts/wo/capabilities/compare/audit.py`
+5. Das Ergebnis wird als `comparison.json` in einem neuen Laufordner abgelegt.
+   — [scripts/wo/report.py](../../../scripts/wo/report.py) (`write_run`)
 
 ## If you change this
-- **Hits:** [Audit-Report](../objects/audit-report.md) (Vergleichsschlüssel), [Receipt](../objects/receipt.md) (Provenienzfelder), [CLI](../objects/cli.md) (neues Kommando), [Qualität](../objects/quality.md).
-- **Does not hit:** [On-Page](../objects/on-page.md), [Page](../objects/page.md) — der Vergleich prüft Ergebnisse, er misst nicht neu.
+- **Hits:** [Audit-Report](../objects/audit-report.md) (`rules_run` und `capability` sind Voraussetzung), [CLI](../objects/cli.md) (`--baseline`/`--current`, `META`), [Quality](../objects/quality.md), `references/`-Regeltexte, wenn `CHECKS` je Capability sich ändert.
+- **Does not hit:** [On-Page](../objects/on-page.md) und [Redirects](../objects/redirects.md) — sie erzeugen die Eingaben, werden aber nicht geändert; [Page](../objects/page.md); [Receipt](../objects/receipt.md), sofern sich die Zonenmetadaten nicht ändern.
 
 ## Surfaces
-Noch keine. Geplanter Einstieg: `wo.py compare --against <run-id>`.
+Kommandozeile: `wo.py compare [--baseline RUN] [--current RUN]`. Schreibt in die
+Evidence-Zone des Workspace.
 
 ## See
-[PLAN.md](../../../PLAN.md) §4.2 und Runde 4.
+[capabilities/compare/README.md](../../../scripts/wo/capabilities/compare/README.md). Entscheidung D25 in [decision-log.md](../../../decision-log.md).
