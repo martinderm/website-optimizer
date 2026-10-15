@@ -392,18 +392,39 @@ baseline, so that `compare` has something to compare against on the next run.
 Exit conditions: `wo.py run-all` produces a schema-valid report; the migrated
 script agrees with the old one on a real site; baselines live in the workspace;
 `skills-catalog.yaml` has an entry and `validate-skills-catalog.py` passes; git
-repository and submodule are set up; hugo-wizard stubs are written.
+repository and submodule are set up.
+
+**The `hugo-wizard` chore stubs move to round 3a, not round 2.** An earlier
+version of this plan put them here; that was wrong. A stub replaces content with
+a pointer to a reference file, and the reference files do not exist until 3a.
+Writing the stubs first would leave six pointers at files that cannot be opened —
+named but not wired, which is the ghost case — and would delete working knowledge
+from `hugo-wizard` with nothing taking its place. Reference integrity is
+copy-verify-remove: a home is never removed before the new home exists.
+
+### Round 3a — references, then the chore stubs
+
+The reference set. As each topic file lands, the matching chore in
+`hugo-wizard` is verified against it, then reduced to a stub with
+`delegated_to: website-optimizer`. This is the only safe order: the pointer is
+created after its target, never before.
+
+### Round 3b — the system map
+
+`docs/system-map/`, built slice by slice — inventory, catalog, nouns, processes,
+change-impact, re-verify — with a human gate between slices. Object cards cite a
+working implementation, which is why the map comes after the references and after
+round 2's tool exists.
 
 **Catalog blast radius is `workspace_scoped`, not `read_only`.** The skill
 writes reports and baselines into the consuming workspace by design. Round 1 had
 `read_only` in view only because no writes existed yet; section 4.3 settled it.
 
-### Round 3 — breadth and the map
+### Round 4 — remaining capabilities
 
-Remaining capabilities (`redirects`, `images`, `schema`, `compare`), the full
-reference set, and `docs/system-map/` built slice by slice (inventory → catalog →
-nouns → processes → change-impact → re-verify), with a human gate between
-slices.
+`redirects`, `images`, `schema`, `compare`, and live crawling via `playwright-cli`.
+Kept separate so that a failing capability never blocks the map or the
+references.
 
 ---
 
