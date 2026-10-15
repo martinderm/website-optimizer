@@ -15,15 +15,16 @@ description: >-
 
 ## Status
 
-**Round 2 of 4 — one capability working. References still pending.**
+**Round 3a of 4 — references written, chore stubs next.**
 
-`scripts/` is live: `on-page` audits a static output directory and writes an
-append-only evidence run. `references/` and `docs/system-map/` do not exist yet.
+`references/` and `scripts/` are live. `docs/system-map/` does not exist yet.
 
-**Nothing in this skill may be cited as a rule until the corresponding reference
-file exists.** Until round 3a lands, `hugo-wizard`'s own chore documents remain
-where SEO rules live, and they stay there until their replacement exists.
-Full design and migration map: [PLAN.md](PLAN.md).
+`on-page` audits a static output directory and writes an append-only evidence
+run. The reference set carries the rules, each with a source and a support level;
+`sources.md` records which sources were actually read and which were inherited
+from a workspace document.
+
+Round 3b builds the system map. Round 4 adds the remaining capabilities.
 
 ## Quick start
 
@@ -42,22 +43,23 @@ Configure with `site.optimizer.toml` (portable, commit it) and
 The router is a dispatch table, never a copy of the content. One row per
 question, pointing at one file. It is filled in as the references land.
 
-| Question | Planned file |
+| Question | File |
 |---|---|
 | Titles, descriptions, canonicals, snippet formula | `references/seo-core.md` |
-| Internal linking, cornerstone content, anchor text | `references/seo-core.md` |
-| `robots.txt`, sitemap, `noindex`, crawl budget | `references/indexing.md` |
-| Search Console, Bing Webmaster, indexing request | `references/indexing.md` |
-| 301 redirects, URL lifecycle, legacy URLs | `references/redirects.md` |
+| Open Graph, Twitter Cards, social previews | `references/seo-core.md` |
+| Cornerstone content, anchor text, orphans, breadcrumbs, URL structure | `references/internal-linking.md` |
+| `robots.txt`, sitemap, `noindex`, Search Console, Bing | `references/indexing.md` |
+| 301 redirects, chains, wildcards, URL lifecycle, archives | `references/redirects.md` |
 | JSON-LD, `@graph`, schema types, rich results | `references/structured-data.md` |
 | Images: WebP/AVIF, `srcset`, dimensions, lazy loading, favicons, OG images | `references/images.md` |
-| Video: codec, poster, preload, transcript, `VideoObject` | `references/video.md` |
-| LCP/INP/CLS, fonts, CSS/JS budget, caching | `references/performance.md` |
-| Semantics, keyboard, focus, contrast, skip link | `references/accessibility.md` |
+| Video: codec, poster, preload, captions, `VideoObject` | `references/video.md` |
+| LCP/INP/CLS, fonts, budgets, caching | `references/performance.md` |
+| Semantics, keyboard, focus, contrast, forms, responsive layout | `references/accessibility.md` |
 | `llms.txt`, AI overviews, AI crawlers, extractable content | `references/llm-visibility.md` |
-| Static generator specifics (Hugo robots layout, build output) | `references/static-sites.md` |
-| Dynamic CMS specifics (plugin SEO, WP-CLI, cache invalidation) | `references/dynamic-sites.md` |
-| Run an audit, read a report | `scripts/README.md` |
+| Static generator specifics (robots layout, sitemap config, build output) | `references/static-sites.md` |
+| Dynamic CMS specifics (plugins, WP-CLI, cache, archives) | `references/dynamic-sites.md` |
+| Where a rule came from, and how strong it is | `references/sources.md` |
+| Run an audit, read a report | `scripts/README.md`, `capabilities/on_page/README.md` |
 
 ## Not this skill
 
