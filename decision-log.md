@@ -787,3 +787,38 @@ through node removes an entire quoting layer rather than escaping it.
 
 **Consequence:** `[crawl] cli_path` exists as an escape hatch for an
 installation this resolution cannot see, rather than as the normal path.
+
+---
+
+## D37 - A sitemap is not always a list of pages
+
+**Status:** accepted
+**Support level:** observed
+
+**Decision:** a sitemap whose root element is `<sitemapindex>` is followed to its
+children, up to two levels, before any page is rendered. Discovery tries
+`robots.txt` before the well-known filenames.
+
+**Reason:** WordPress Core (`/wp-sitemap.xml`) and Yoast (`/sitemap_index.xml`)
+both emit an index. The original reader took every `<loc>` as a page, so on a
+WordPress site it would have visited the XML files as though they were pages and
+reported on documents that are not documents. A wrong result produced
+confidently is worse than no result: the tool's whole claim is that its findings
+are about the site.
+
+**Why `robots.txt` comes before the guesses:** it is the site naming its own
+file, in the one document whose purpose is to say what should be crawled. That
+outranks a filename inferred from convention. The well-known paths follow
+because the convention is common enough to be worth trying and a miss costs one
+404 - cheaper than asking someone to look it up.
+
+**Consequence:** a WordPress workspace needs no sitemap configuration at all. It
+also means the tool reaches WordPress without knowing anything about WordPress,
+which is the better dependency: no plugin-specific code that ages.
+
+**Still open, and named:** `redirects` has no source on a WordPress site. It
+reads a rule file; WordPress on nginx has no `.htaccess`, and its redirects live
+in the database or a plugin. Enabling that capability there today would report
+"no rules found" about a site that has redirects. It must either gain a source
+or be explicitly switched off per site, and the second is what the config
+already supports.

@@ -96,6 +96,167 @@ class WallDetectionTest(unittest.TestCase):
         self.assertIn("JavaScript", reason)
 
 
+import urllib.request
+
+# Saved once, at import. Saving it inside a test would save whichever patch was
+# already in place, and one test would leak into the next.
+_REAL_URLOPEN = urllib.request.urlopen
+
+
+def _restore_urlopen():
+    urllib.request.urlopen = _REAL_URLOPEN
+
+
+class SitemapTest(unittest.TestCase):
+    """A sitemap is not always a list of pages.
+
+    Regression: WordPress Core and Yoast both emit a *sitemap index* - a list of
+    further sitemap files. The original reader took every <loc> as a page, so on
+    a WordPress site the crawl would have visited the XML files themselves and
+    reported on documents that are not documents.
+    """
+
+    INDEX = """<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<sitemap><loc>https://example.com/post-sitemap.xml</loc></sitemap>
+<sitemap><loc>https://example.com/page-sitemap.xml</loc></sitemap>
+</sitemapindex>"""
+
+    URLSET = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url><loc>https://example.com/one/</loc></url>
+<url><loc>https://example.com/two/</loc></url>
+</urlset>"""
+
+    def _serve(self, files: dict, missing_ok: tuple = ()):
+        def urlopen(url, timeout=None):
+            for pattern in missing_ok:
+                if pattern in url:
+                    raise OSError("404")
+            if url not in files:
+                raise OSError(f"404 {url}")
+            return _Body(files[url])
+
+        urllib.request.urlopen = urlopen
+        self.addCleanup(_restore_urlopen)
+        return urlopen
+
+    def test_index_is_followed_to_the_pages(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _config(tmp)
+            self._serve({
+                "https://example.com/sitemap_index.xml": self.INDEX,
+                "https://example.com/post-sitemap.xml": self.URLSET,
+                "https://example.com/page-sitemap.xml": self.URLSET,
+            })
+            urls = crawl._urls_from_sitemap("https://example.com/sitemap_index.xml", cfg)
+
+        self.assertEqual(urls, [
+            "https://example.com/one/", "https://example.com/two/",
+        ])
+        # The decisive property: no .xml anywhere in the result.
+        self.assertFalse([u for u in urls if u.endswith(".xml")])
+
+    def test_flat_urlset_still_works(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _config(tmp)
+            self._serve({"https://example.com/sitemap.xml": self.URLSET})
+            urls = crawl._urls_from_sitemap("https://example.com/sitemap.xml", cfg)
+        self.assertEqual(len(urls), 2)
+
+    def test_pages_are_deduplicated_across_sitemaps(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _config(tmp)
+            self._serve({
+                "https://example.com/sitemap_index.xml": self.INDEX,
+                "https://example.com/post-sitemap.xml": self.URLSET,
+                "https://example.com/page-sitemap.xml": self.URLSET,
+            })
+            urls = crawl._urls_from_sitemap("https://example.com/sitemap_index.xml", cfg)
+        self.assertEqual(len(urls), len(set(urls)))
+
+    def test_max_pages_is_respected_across_all_child_sitemaps(self):
+        big = ("<urlset><url><loc>https://example.com/p%d/</loc></url></urlset>"
+               % 0).replace("p%d/", "".join(f"p{i}/</url><url><loc>https://example.com/" for i in range(60)))
+        big = f"<urlset>{''.join(f'<url><loc>https://example.com/p{i}/</loc></url>' for i in range(60))}</urlset>"
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _config(tmp, max_pages=10)
+            self._serve({
+                "https://example.com/sitemap_index.xml": self.INDEX,
+                "https://example.com/post-sitemap.xml": big,
+                "https://example.com/page-sitemap.xml": big,
+            })
+            urls = crawl._urls_from_sitemap("https://example.com/sitemap_index.xml", cfg)
+        self.assertEqual(len(urls), 10)
+
+    def test_missing_sitemap_raises_only_when_it_was_asked_for(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _config(tmp)
+            self._serve({}, missing_ok=("missing",))
+            with self.assertRaises(crawl.CrawlError):
+                crawl._urls_from_sitemap("https://example.com/missing.xml", cfg)
+            # The fallback chain must not raise for every candidate it tries.
+            self.assertEqual(
+                crawl._urls_from_sitemap("https://example.com/missing.xml", cfg, required=False),
+                [],
+            )
+
+    def test_robots_txt_is_the_first_place_looked(self):
+        robots = "User-agent: *\nDisallow: /wp-admin/\nSitemap: https://example.com/from-robots.xml\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _config(tmp)
+            self._serve({
+                "https://example.com/robots.txt": robots,
+                "https://example.com/from-robots.xml": self.URLSET,
+            })
+            urls = crawl.resolve_start_urls(cfg)
+        self.assertEqual(urls, ["https://example.com/one/", "https://example.com/two/"])
+
+    def test_known_wordpress_paths_are_tried_when_robots_is_silent(self):
+        core = self.URLSET.replace("one/", "core-one/").replace("two/", "core-two/")
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _config(tmp)
+            self._serve({
+                "https://example.com/robots.txt": "User-agent: *\n",
+                "https://example.com/wp-sitemap.xml": core,
+            })
+            urls = crawl.resolve_start_urls(cfg)
+        self.assertIn("https://example.com/core-one/", urls)
+
+    def test_a_404_on_every_candidate_falls_back_to_the_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _config(tmp)
+            self._serve({}, missing_ok=("/",))
+            urls = crawl.resolve_start_urls(cfg)
+        self.assertEqual(urls, ["https://example.com/"])
+
+    def test_configured_sitemap_beats_robots_txt(self):
+        robots = "Sitemap: https://example.com/ignored.xml\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _config(tmp, sitemap="/sitemap.xml")
+            self._serve({
+                "https://example.com/robots.txt": robots,
+                "https://example.com/ignored.xml": self.URLSET,
+                "https://example.com/sitemap.xml": self.URLSET,
+            })
+            urls = crawl.resolve_start_urls(cfg)
+        self.assertEqual(len(urls), 2)
+
+
+class _Body:
+    def __init__(self, text):
+        self._text = text
+
+    def read(self):
+        return self._text.encode("utf-8")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
 class CrawlSettingsTest(unittest.TestCase):
     def test_defaults(self):
         settings = crawl_settings({})

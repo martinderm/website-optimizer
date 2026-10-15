@@ -421,11 +421,22 @@ def _first_reasons(failed: list[dict[str, str]], limit: int = 3) -> str:
 
 
 def resolve_start_urls(config) -> list[str]:
-    """Which URLs to render, from config or the sitemap.
+    """Which URLs to render, from config or the site's own declarations.
 
-    Order of preference, and why: an explicit list is a decision someone made;
-    a sitemap is the site's own declaration of what is a page; a bare root URL
-    is a guess and is labelled as one in the report.
+    Order of preference, and why each step exists:
+
+    1. explicit `start_urls` - a decision someone made.
+    2. a configured `sitemap` - a decision someone made about where it is.
+    3. `robots.txt` - the site naming its own sitemap. This is the step that
+       makes a WordPress work without configuration, because WP Core and Yoast
+       disagree about the filename and nobody at the workspace knows which.
+    4. well-known paths, tried in order, because the convention is common
+       enough to be worth a guess and cheap enough that a miss costs one 404.
+    5. the root URL - a guess, and labelled as one in the report.
+
+    Every step but the first is a guess in some sense; the difference is how
+    expensive the guess is to undo, which is why the fallbacks are ordered by
+    how loudly the site itself answers first.
     """
     explicit = list(config.crawl.get("start_urls", []) or [])
     if explicit:
@@ -435,7 +446,65 @@ def resolve_start_urls(config) -> list[str]:
     if sitemap:
         return _urls_from_sitemap(_absolute(config.site_url, sitemap), config)
 
+    for candidate in _sitemap_candidates(config):
+        urls = _try_sitemap(candidate, config)
+        if urls:
+            return urls
+
     return [config.site_url.rstrip("/") + "/"]
+
+
+# Filenames the sitemap convention actually uses. WordPress Core and Yoast - by
+# far the two commonest sitemap producers on WordPress - disagree about both the
+# name and the extension, which is why the list is a list.
+KNOWN_SITEMAPS = (
+    "/wp-sitemap.xml",      # WordPress Core, since 5.5
+    "/sitemap_index.xml",   # Yoast SEO
+    "/sitemap.xml",         # generic, and what a hand-written site uses
+    "/sitemap-index.xml",   # Rank Math and others
+)
+
+
+def _sitemap_candidates(config) -> list[str]:
+    root = config.site_url.rstrip("/")
+    from_robots = _sitemaps_from_robots(root, config)
+    return from_robots + [root + path for path in KNOWN_SITEMAPS]
+
+
+def _sitemaps_from_robots(root: str, config) -> list[str]:
+    """`Sitemap:` directives in robots.txt. The site naming its own file.
+
+    Cheap, one request, and authoritative when present: robots.txt is where a
+    site states what it wants crawled, so a sitemap it names there is a better
+    answer than any filename we could guess.
+    """
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(
+            root + "/robots.txt",
+            timeout=int(config.crawl.get("timeout_seconds", DEFAULT_TIMEOUT)),
+        ) as response:
+            body = response.read().decode("utf-8", "replace")
+    except Exception:  # noqa: BLE001 - no robots.txt is entirely normal
+        return []
+
+    found: list[str] = []
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith("sitemap:"):
+            value = stripped.split(":", 1)[1].strip()
+            if value:
+                found.append(_absolute(root, value))
+    return found
+
+
+def _try_sitemap(url: str, config) -> list[str]:
+    """Read one sitemap, or return nothing. Used for the fallback chain."""
+    try:
+        return _urls_from_sitemap(url, config, required=False)
+    except CrawlError:
+        return []
 
 
 def _absolute(base: str, url: str) -> str:
@@ -444,33 +513,106 @@ def _absolute(base: str, url: str) -> str:
     return urljoin(base.rstrip("/") + "/", url.lstrip("/"))
 
 
-def _urls_from_sitemap(url: str, config) -> list[str]:
-    """Read loc entries from a sitemap without an XML parser dependency.
-
-    `xml.etree` is stdlib and would be the obvious choice, but a sitemap served
-    with a wrong content type or a namespace prefix would then abort the crawl.
-    The loc values are plain text and a regex over them cannot fail on shape.
-    """
-    import re
+def _fetch(url: str, config) -> str:
     import urllib.request
 
-    limit = int(config.crawl.get("max_pages", 200))
     try:
-        with urllib.request.urlopen(url, timeout=int(config.crawl.get("timeout_seconds", DEFAULT_TIMEOUT))) as response:
-            body = response.read().decode("utf-8", "replace")
-    except Exception as exc:  # noqa: BLE001 - any failure here means "no sitemap"
-        raise CrawlError(
-            f"The sitemap could not be read: {url}\n{exc}\n"
-            f"List the pages explicitly under [crawl] start_urls instead."
-        ) from exc
+        with urllib.request.urlopen(
+            url, timeout=int(config.crawl.get("timeout_seconds", DEFAULT_TIMEOUT))
+        ) as response:
+            return response.read().decode("utf-8", "replace")
+    except Exception as exc:  # noqa: BLE001 - any failure here means "not usable"
+        raise CrawlError(f"{url} could not be read: {exc}") from exc
 
-    locs = re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", body, re.IGNORECASE)
-    if not locs:
-        raise CrawlError(
-            f"No <loc> entries in the sitemap: {url}\n"
-            f"It may be a sitemap index. List pages under [crawl] start_urls instead."
-        )
-    return locs[:limit]
+
+def _locs(body: str) -> list[str]:
+    import re
+
+    return re.findall(r"<loc>\s*([^<\s]+)\s*</loc>", body, re.IGNORECASE)
+
+
+def _urls_from_sitemap(url: str, config, required: bool = True) -> list[str]:
+    """Every page URL in a sitemap, following an index when there is one.
+
+    A sitemap is not always a sitemap. WordPress Core (`/wp-sitemap.xml`) and
+    Yoast (`/sitemap_index.xml`) both emit a *sitemap index*: a list of further
+    sitemap files, not of pages. Reading an index as a page list is not a
+    degraded result, it is a wrong one — the tool would then crawl the XML files
+    as though they were pages and report on documents that are not documents.
+    So the two shapes are distinguished by their root element and an index is
+    followed.
+
+    `xml.etree` is stdlib and would be the obvious parser; the choice here is a
+    regex because a sitemap served with a wrong content type or an unexpected
+    namespace prefix should not abort a crawl, and `<loc>` values are plain text
+    that cannot fail on shape.
+    """
+    import re
+
+    limit = int(config.crawl.get("max_pages", 200))
+    max_index = int(config.crawl.get("max_sitemaps", 50))
+    timeout = int(config.crawl.get("timeout_seconds", DEFAULT_TIMEOUT))
+
+    def fail(message: str):
+        if required:
+            raise CrawlError(
+                f"{message}\n"
+                f"List the pages explicitly under [crawl] start_urls, or point\n"
+                f"[crawl] sitemap at a file that lists pages rather than other sitemaps."
+            )
+        return None
+
+    queue: list[tuple[str, int]] = [(url, 0)]
+    seen_sitemaps: set[str] = set()
+    pages: list[str] = []
+    seen_pages: set[str] = set()
+
+    while queue and len(seen_sitemaps) < max_index and len(pages) < limit:
+        current, depth = queue.pop(0)
+        if current in seen_sitemaps:
+            continue
+        seen_sitemaps.add(current)
+
+        try:
+            body = _fetch(current, config)
+        except CrawlError:
+            if required and depth == 0:
+                fail(f"The sitemap could not be read: {current}")
+                return []
+            continue
+
+        # Root element decides the shape. A sitemap index points at more
+        # sitemaps; a urlset lists pages.
+        is_index = bool(re.search(r"<sitemapindex\b", body, re.IGNORECASE))
+        locs = _locs(body)
+
+        if not locs:
+            if required and depth == 0:
+                fail(f"No <loc> entries in {current}")
+            continue
+
+        if not is_index:
+            for loc in locs:
+                if loc not in seen_pages:
+                    seen_pages.add(loc)
+                    pages.append(loc)
+                    if len(pages) >= limit:
+                        break
+            continue
+
+        if depth >= 2:
+            # Two levels is already unusual. Beyond it a site is either
+            # generated wrong or the index is not what we think it is, and
+            # following it further would be guessing.
+            if required and depth == 0:
+                fail(f"The sitemap index at {current} nests more than two levels deep.")
+            continue
+
+        queue.extend((loc, depth + 1) for loc in locs)
+
+    if required and not pages and not fail(None):
+        fail(f"No page URLs found under {url}.")
+    return pages[:limit]
 
 
 def crawl_settings(data: dict) -> dict[str, Any]:
@@ -485,6 +627,9 @@ def crawl_settings(data: dict) -> dict[str, Any]:
     max_pages = section.get("max_pages", 200)
     if not isinstance(max_pages, int) or isinstance(max_pages, bool) or max_pages <= 0:
         raise ConfigError(f"[crawl] max_pages must be a positive integer, got {max_pages!r}.")
+    max_sitemaps = section.get("max_sitemaps", 50)
+    if not isinstance(max_sitemaps, int) or isinstance(max_sitemaps, bool) or max_sitemaps <= 0:
+        raise ConfigError(f"[crawl] max_sitemaps must be a positive integer, got {max_sitemaps!r}.")
     start = section.get("start_urls", []) or []
     if not isinstance(start, list) or not all(isinstance(u, str) for u in start):
         raise ConfigError("[crawl] start_urls must be a list of URL strings.")
@@ -492,6 +637,7 @@ def crawl_settings(data: dict) -> dict[str, Any]:
         "start_urls": start,
         "sitemap": section.get("sitemap"),
         "max_pages": max_pages,
+        "max_sitemaps": max_sitemaps,
         "timeout_seconds": timeout,
         "settle_ms": settle,
         "cli_path": section.get("cli_path"),
