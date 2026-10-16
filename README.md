@@ -113,6 +113,23 @@ handed to the owning skill.
 Deviations from the shared authoring guide are recorded with their reason in
 [decision-log.md](decision-log.md).
 
+## Open work
+
+[GitHub Issues](https://github.com/martinderm/website-optimizer/issues) — not a
+file in this repository. A local backlog goes stale where nobody looks; an issue
+is where the trigger for a deferred decision is recorded.
+
+Known and not open: `compare` cannot tell a site change from a page that rendered
+differently (D45), the fold measurement exists but is not run automatically (D40),
+and no CI is configured (D39). Those are decisions with reasons, not gaps waiting
+to be filled, so they are not issues. The decision log says why.
+
+The issues that do exist share a shape: a reference file describes something the
+tool cannot measure. `internal-linking.md` is 102 lines about orphan pages and
+depth with no rule behind any of it; nothing checks `robots.txt`, a sitemap or
+`llms.txt`; `hreflang` appears nowhere. The tool is honest about what it claims
+and does; the reference set claims more.
+
 ### Standard Template for `AGENTS.md`
 
 ```markdown
