@@ -977,3 +977,40 @@ that means when fetching them is the only option left.
 An unmarked opinion in a file whose front matter says `evidence_level: normative`
 would be read with the authority of the rule above it, which is the same failure
 in miniature as writing the decision at all.
+
+---
+
+## D43 - The version moves when the rules move
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** `TOOL_VERSION` is bumped whenever a rule is added, removed, split
+or re-severitied — that is, whenever `rules_run` would differ between two runs of
+the same site. Not for anything else.
+
+**Reason:** `0.2.0` covered at least three mutually incompatible rule sets. The
+seventeen runs stored across the two workspaces all read
+`source_version: website-optimizer 0.2.0`, while their `rules_run` arrays show
+eight distinct rule sets underneath. A receipt is supposed to say what produced
+the artifact beside it; this one said something that was true of none of them
+individually.
+
+**What was not the problem, and matters to say.** `rules_run` worked. Across the
+sixteen runs that carry it there are eight distinct signatures, which is exactly
+what makes them distinguishable — including the live runs, whose `images` sets
+hold eight rules against the static nine because `icon.file_missing` correctly
+drops out where there is no build directory. D25's mechanism held; only the
+coarse label above it had gone stale.
+
+**The old receipts stay untouched.** Evidence is append-only (D24, D8), and a
+receipt is a record of what a run claimed at the time. Rewriting seventeen
+receipts to carry a version none of them ran under would be worse than the defect
+it fixed. `0.2.0` now names a real historical state, and `rules_run` describes
+what inside it varied.
+
+**How this would have been caught.** A check that the version string differs
+whenever `CHECKS` does — the same shape as the existing round-trip test between
+`CHECKS` and the rules a capability can actually emit. Not built; noted so the
+next person does not rediscover it.

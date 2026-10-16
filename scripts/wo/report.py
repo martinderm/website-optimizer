@@ -27,7 +27,18 @@ from typing import Any
 from . import jsonschema
 
 TOOL_NAME = "website-optimizer"
-TOOL_VERSION = "0.2.0"
+# Bumped whenever a rule is added, removed, split or re-severitied — that is,
+# whenever `rules_run` would differ between two runs of the same site. A patch
+# bump for anything else.
+#
+# The version sat at 0.2.0 across at least three mutually incompatible rule
+# sets, which made `source_version` in the receipt a claim the report could not
+# support: seventeen stored runs all read "website-optimizer 0.2.0" while their
+# `rules_run` arrays show eight distinct rule sets underneath. `rules_run` did
+# its job throughout — it is why those runs are still distinguishable at all —
+# but a version string that stays still while the thing it names changes is not
+# provenance, it is decoration. See decision D43.
+TOOL_VERSION = "0.3.0"
 
 # The artifact metadata contract. The authoritative schema lives in
 # agent-architecture; it is not copied here, because one definition of the
