@@ -43,6 +43,23 @@ dieser Codepage ließ einen `UnicodeDecodeError` in einem Reader-Thread den
 Prozess mit Traceback sterben. Ein Werkzeug, dessen Eingabe beliebige Webseiten
 sind, darf die Kodierung des Terminals nicht erben (D35).
 
+**Ein Crawl mit dynamischen Inhalten ist nicht reproduzierbar.** Gemessen an
+einer echten WordPress-Site: zwei Läufe über dieselben 29 Seiten, dieselbe
+Regelmenge, und trotzdem 29 Befunde weniger im zweiten. Ursache war eine
+interaktive Leaflet-Karte, die auf einer Seite anders gerendert hat — dieselben
+177 Kachel-URLs, aber 25 davon je einmal selteter, dazu vier Leaflet-Marker. Der
+Bestand blieb gleich, die Häufigkeit nicht.
+
+Daraus folgt für `compare`: gleicher Umfang ist **keine** hinreichende
+Bedingung für Vergleichbarkeit. D44 fängt den Fall ab, in dem die Seitenzahl
+weicht; dieser hier hat sie nicht, und `compare` meldet das Churn als
+`site-change`. Formal richtig, praktisch irreführend — es sagt „die Site hat sich
+geändert", während sich nur die Karte neu gefaltet hat.
+
+Bewusst nicht maschinell abgefangen: eine Karte, ein Slider oder ein Widget würde
+jeden Vergleich stumm schalten, und die Information ist ohnehin im Report. Der
+Leser muss sie nur bekommen.
+
 ## Connected to
 Gehört zu [Page-Set](page-set.md), das die Ergebnisse an die Capabilities reicht.
 Prozess: [Audit-Live](../processes/audit-live.md).

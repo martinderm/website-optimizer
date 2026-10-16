@@ -56,6 +56,20 @@ and no single-page view can see it.
 
 ## Known limits
 
+- **A live run over dynamically loaded content is not reproducible, and it does
+  not look like it in the numbers.** Two crawls of the same 29 pages under the
+  same rule set differed by 29 findings, all from one interactive Leaflet map that
+  rendered differently on one page: the same 177 tile URLs, 25 of them occurring
+  once less, plus four Leaflet markers. Nothing on the site changed.
+
+  This is the failure mode to keep in mind before reading a small difference on
+  any site with a map, a slider, a widget or anything else that renders after
+  load. It shows up under `image.srcset_missing`, `image.dimensions_missing` and
+  `image.format_legacy` at once and by the same amount, because they all count
+  per image — which is the first thing to look for, and the cheapest way to tell
+  this apart from a rule change. `compare` reports it as `site-change`: equal
+  scope, so D44 does not apply, and formally the site did move. It did not.
+
 - `loading` strategy cannot be judged statically: whether an image is above the
   fold needs a layout, so only a wholly undeclared strategy is reported.
 - **A partially declared strategy raises a question, not a verdict.** The fold

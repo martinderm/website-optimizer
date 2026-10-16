@@ -153,3 +153,20 @@ An SVG favicon is optional:
 - [ ] `alt` present on every image; decorative images `alt=""`
 - [ ] Favicon set complete and present in the build output
 - [ ] `og:image` absolute, 1200×630, with `og:image:alt`
+
+## Counting images on a page that loads them
+
+A map, a slider, a gallery or a widget fetches its images *after* load, and which
+images it fetches depends on the viewport and on how far the script has run when
+the page is read. Two visits to the same page can therefore yield different image
+counts for reasons that have nothing to do with the page.
+
+Practical consequence for anyone comparing two audits of such a site: a small
+difference that appears in several per-image checks **at once and by the same
+amount** is usually this, not a change. One image missing means three findings
+disappear together — the `srcset`, the dimensions and the format check all count
+the same element.
+
+If the counts move, look at the URLs before looking at the site. Identical URLs
+with different frequencies mean the page rendered differently; different URLs mean
+the page changed.

@@ -1057,3 +1057,45 @@ misattribution for a less informed report.
 **Unknown scope does not withhold.** A report without the counter stays
 comparable, because refusing against every older report would trade a narrow
 misattribution for total silence - the exact trade D25 exists to prevent.
+
+---
+
+## D45 - Non-reproducible content is a named limit, not an automatic refusal
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** the fact that a live crawl of dynamically loaded content is not
+reproducible is documented in `crawl.md`, the `images` capability README and
+`references/images.md`. No rule was added and `compare` was left as it is.
+
+**Reason:** found by having the WordPress workspace re-run `images` a day after
+the first run and reporting the result as *lower* than expected. It was lower
+because three per-image rules each lost exactly 29 — the page count — and
+29 + the new rule's 26 is the 61 the totals differed by. No rule had changed.
+
+The cause was not the rules and not the coverage. Both runs saw 29 of 29 pages
+with an identical rule set, and the same 177 OpenStreetMap tile URLs appeared in
+both — 25 of them just once less, plus four Leaflet marker images. On one page the
+interactive map had rendered differently. Nothing on the site changed.
+
+**Why equal scope is not enough.** D44 withholds attribution when the page counts
+differ. Here they did not, so the churn arrives as `site-change`: formally right,
+practically misleading, and it says the site got worse when a map refolded.
+
+**Why not refused automatically.** A map, a slider, a gallery or a widget would
+silence comparison on most WordPress sites. The tool would refuse for a reason its
+caller cannot act on — the trade D25 exists to prevent, taken one step further
+down. The information is in the report; the reader has to ask for it.
+
+**What a reader can do with it.** Several per-image findings moving *together and
+by the same amount* is the signature: they all count the same element, so one
+missing image costs three. Identical URLs with shifted frequencies mean the page
+rendered differently; different URLs mean the page changed. That distinction is a
+minute of work and it is the difference between chasing a phantom and not.
+
+**Not yet closed.** The general case — a site whose rendered DOM varies run to run
+for reasons this cannot see — has no detection. Naming it is what D45 does;
+detecting it would mean crawling twice and comparing the two crawls to each other,
+which doubles the most expensive thing this tool does.

@@ -59,7 +59,7 @@ line says otherwise.
 website-optimizer/
 ├── SKILL.md                  router + source-of-truth table
 ├── PLAN.md                   this file
-├── decision-log.md           durable decisions D1–D42
+├── decision-log.md           durable decisions D1–D45
 ├── README.md
 ├── LICENSE                   MIT
 ├── references/               13 files
