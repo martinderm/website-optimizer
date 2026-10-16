@@ -59,5 +59,17 @@ Schreibt `data/crawl/<run-id>/` im konsumierenden Workspace, jeweils mit
 Provenienz-Kommentar (URL, Abrufzeit, Tool-Version). Retention-Klasse
 `crawl-ephemeral`, git-ignoriert (D27).
 
+**`[crawl] profile` öffnet den Browser mit `--profile=<dir>`** (D41). Der einzige
+Weg an einer Consent-Wall vorbei: einmal `--headed` starten, zustimmen, und alle
+späteren Crawls kommen bereits dahinter vorbei. Ein relativer Pfad löst gegen den
+Workspace auf — damit sind „ein Profil pro Agent-Workspace" und „ein Profil pro
+Maschine" beide formulierbar, ohne dass eine Variante erzwungen wird. Standard ist
+aus: ein Profilverzeichnis trägt Session-Cookies und darf nicht ungefragt
+entstehen. Das Werkzeug legt das Verzeichnis an und liest, schreibt oder meldet
+seinen Inhalt nie.
+
+Noch nie gegen eine echte Wall getestet: der Wächter ist getestet, der Ausweg
+nicht.
+
 ## See
 Quellmodul: [scripts/wo/crawl.py](../../../scripts/wo/crawl.py). D26, D27, D32, D34, D35, D36 in [decision-log.md](../../../decision-log.md). Browser-Handhabung: `../playwright-cli/SKILL.md`.

@@ -29,15 +29,33 @@ selbst ist redaktionelle Prosa und in einem Report nutzlos.
 `icons_declared`, `icon_files_present` (braucht das Verzeichnis),
 `og_image_absolute`.
 
-Regeln: `image.dimensions_missing` (critical), `image.srcset_missing`,
-`image.sizes_missing`, `image.format_legacy`, `image.loading_unset`,
-`image.og_relative`, `icon.none_declared` (je warning),
-`icon.file_missing` (critical).
+Regeln: `image.src_missing`, `image.dimensions_missing` (critical),
+`icon.file_missing` (critical), `image.srcset_missing`, `image.sizes_missing`,
+`image.format_legacy`, `image.loading_unset`, `image.loading_partial`,
+`image.og_relative`, `icon.none_declared` (je warning).
 
 `width="100%"` zählt nicht als Dimension: nur eine Zahl reserviert Platz.
 
-`image.loading_unset` meldet **einmal pro Seite**, nicht pro Bild — eine Site,
-die nichts lazy lädt, hat ein Problem, nicht zweihundert.
+**Ein `<img>` ohne `src` wird einmal gemeldet, nicht dreimal** (D31). Nichts wird
+geladen, also reserviert es keinen Platz und passt sich nichts an. Auf der
+Referenzseite waren das 140 der 469 kritischen Befunde — dieselbe Lightbox-
+Vorlage, drei Rule-Treffer pro Element. Bei 37 davon ist das Attribut *leer*
+statt abwesend: `<img src alt>` parst zu `src=""`, löst gegen das Dokument auf,
+und der Browser stellt tatsächlich eine Anfrage nach der Seite selbst als Bild.
+
+**Beide `loading`-Regeln melden einmal pro Seite, nicht pro Bild** — eine Site,
+die nichts lazy lädt, hat ein Problem, nicht zweihundert. Der Unterschied
+zwischen ihnen ist die Aussage: `loading_unset` heißt *kein* Bild deklariert eine
+Strategie, das ist an jedem ein Defekt. `loading_partial` heißt *manche tun es*,
+und das ist eine **offene Frage, kein Urteil** (D40): das Hero-Bild ist vermutlich
+absichtlich eager, ob die anderen lazy-Kandidaten sind, weiß man statisch nicht.
+Vor dieser Regel blieben 121 Seiten der Referenzseite und 26 von 29 einer
+WordPress-Seite still — darunter eine mit 42 OpenStreetMap-Kacheln, die der
+Browser alle sofort lädt. Stille las sich als sauber.
+
+`icon.file_missing` fällt im Live-Modus aus `rules_run` heraus: ein Crawl hat kein
+Build-Verzeichnis, in dem die Datei liegen könnte, und eine Regel, die nicht laufen
+kann, darf nicht als eine gemeldet werden, die nichts fand.
 
 - [scripts/wo/capabilities/images/audit.py](../../../scripts/wo/capabilities/images/audit.py)
 
