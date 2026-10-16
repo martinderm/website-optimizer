@@ -160,12 +160,87 @@ class ImagesTest(unittest.TestCase):
             '<html lang="de"><link rel="icon" href="/favicon.ico">'
             '<img src="/a.jpg"><img src="/b.jpg"></html>'
         )
+        # The video rules need two pages: a poster cannot be both absent and
+        # declared, and `preload_unset` needs a video that declares no strategy.
+        no_poster = _page('<html lang="de"><video src="/a.mp4"></video></html>')
+        missing_poster = _page(
+            '<html lang="de"><video src="/a.mp4" poster="/missing.jpg"></video></html>')
         with tempfile.TemporaryDirectory() as root:
             emitted = set(_ids(images.audit_page(no_icons, Path(root))))
             emitted |= set(_ids(images.audit_page(with_icons, Path(root))))
             emitted |= set(_ids(images.audit_page(undeclared, Path(root))))
+            emitted |= set(_ids(images.audit_page(no_poster, Path(root))))
+            emitted |= set(_ids(images.audit_page(missing_poster, Path(root))))
         self.assertEqual(emitted - set(images.CHECKS), set())
         self.assertEqual(set(images.CHECKS) - emitted, set())
+
+
+class VideoTest(unittest.TestCase):
+    def test_a_video_without_a_poster_is_reported_once_per_page(self):
+        page = _page('<html lang="de"><video src="/a.mp4" preload="none"></video>'
+                     '<video src="/b.mp4" preload="none"></video></html>')
+        findings = [f for f in images.audit_page(page)
+                    if f["rule_id"] == "video.poster_missing"]
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["observed"], 2)
+        self.assertIn("2/2", findings[0]["message"])
+
+    def test_a_declared_poster_is_silent(self):
+        page = _page('<html lang="de"><video src="/a.mp4" poster="/p.jpg" '
+                     'preload="none"></video></html>')
+        self.assertNotIn("video.poster_missing", _ids(images.audit_page(page)))
+
+    def test_a_poster_the_build_never_emitted_is_critical(self):
+        """The same silent fault as a missing icon, one element type over."""
+        page = _page('<html lang="de"><video src="/a.mp4" poster="/p.jpg" '
+                     'preload="none"></video></html>')
+        with tempfile.TemporaryDirectory() as root:
+            findings = [f for f in images.audit_page(page, Path(root))
+                        if f["rule_id"] == "video.poster_file_missing"]
+        self.assertEqual(findings[0]["severity"], "critical")
+
+    def test_a_present_poster_file_is_silent(self):
+        page = _page('<html lang="de"><video src="/a.mp4" poster="/p.jpg" '
+                     'preload="none"></video></html>')
+        with tempfile.TemporaryDirectory() as root:
+            (Path(root) / "p.jpg").write_bytes(b"x")
+            found = _ids(images.audit_page(page, Path(root)))
+        self.assertNotIn("video.poster_file_missing", found)
+
+    def test_a_remote_poster_is_not_checked_against_the_build(self):
+        page = _page('<html lang="de"><video src="/a.mp4" '
+                     'poster="https://cdn.example/p.jpg" preload="none"></video></html>')
+        with tempfile.TemporaryDirectory() as root:
+            found = _ids(images.audit_page(page, Path(root)))
+        self.assertNotIn("video.poster_file_missing", found)
+
+    def test_no_video_declares_a_preload(self):
+        undeclared = _page('<html lang="de"><video src="/a.mp4"></video></html>')
+        self.assertIn("video.preload_unset", _ids(images.audit_page(undeclared)))
+        declared = _page('<html lang="de"><video src="/a.mp4" preload="metadata">'
+                         '</video></html>')
+        self.assertNotIn("video.preload_unset", _ids(images.audit_page(declared)))
+
+    def test_a_page_without_video_is_silent(self):
+        page = _page('<html lang="de"><img src="/a.webp" width="8" height="6" '
+                     'srcset="/a.webp 8w" sizes="100vw" loading="lazy"></html>')
+        found = _ids(images.audit_page(page))
+        self.assertEqual([f for f in found if f.startswith("video.")], [])
+
+    def test_captions_are_not_checked_here(self):
+        """Stated as a limit rather than a clearance: a `<track>` check would be
+        markup, but whether the captions are right needs a person."""
+        page = _page('<html lang="de"><video src="/a.mp4" poster="/p.jpg" '
+                     'preload="none"></video></html>')
+        with tempfile.TemporaryDirectory() as root:
+            found = _ids(images.audit_page(page, Path(root)))
+        self.assertEqual([f for f in found if "caption" in f or "track" in f], [])
+
+    def test_the_two_file_rules_are_the_static_only_ones(self):
+        self.assertEqual(set(images.STATIC_ONLY),
+                         {"icon.file_missing", "video.poster_file_missing"})
+        for rule in images.STATIC_ONLY:
+            self.assertIn(rule, images.CHECKS)
 
 
 class SchemaTest(unittest.TestCase):

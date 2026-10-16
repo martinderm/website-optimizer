@@ -30,9 +30,17 @@ selbst ist redaktionelle Prosa und in einem Report nutzlos.
 `og_image_absolute`.
 
 Regeln: `image.src_missing`, `image.dimensions_missing` (critical),
-`icon.file_missing` (critical), `image.srcset_missing`, `image.sizes_missing`,
-`image.format_legacy`, `image.loading_unset`, `image.loading_partial`,
-`image.og_relative`, `icon.none_declared` (je warning).
+`icon.file_missing` (critical), `video.poster_file_missing` (critical),
+`image.srcset_missing`, `image.sizes_missing`, `image.format_legacy`,
+`image.loading_unset`, `image.loading_partial`, `image.og_relative`,
+`icon.none_declared`, `video.poster_missing`, `video.preload_unset` (je warning).
+
+**Die Video-Regeln wohnen hier, weil der Mechanismus derselbe ist:** etwas im
+Markup Deklariertes wird gegen das geprüft, was der Build erzeugt hat.
+`video.poster_file_missing` ist `icon.file_missing` einen Elementtyp weiter, und
+für zwei Regeln entsteht kein dritter Ordner. Untertitel werden bewusst **nicht**
+geprüft: die Anwesenheit eines `<track>` wäre leicht zu messen, ihre Richtigkeit
+braucht einen Menschen, und ein sauber gemeldetes Video läse sich als geprüft.
 
 `width="100%"` zählt nicht als Dimension: nur eine Zahl reserviert Platz.
 

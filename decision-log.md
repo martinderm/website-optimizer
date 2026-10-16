@@ -1623,3 +1623,37 @@ For `pagination.md` the same check found a contradiction worth keeping: Google's
 2019 announcement retired `rel="next"`/`rel="prev"` as an indexing signal, and
 Google's own faceted-navigation page still lists them, because it descends from
 2014 material. The file says both rather than picking the tidier one.
+
+---
+
+## D59 - The video rules live in `images`, and captions stay unmeasured
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** `video.poster_missing`, `video.poster_file_missing` and
+`video.preload_unset` are rules of the `images` capability. Captions are not
+checked at all, and `references/video.md` says so where the guidance is.
+
+**Why no third folder.** The mechanism is the one `images` already has — something
+declared in the markup, checked against what the build emitted.
+`video.poster_file_missing` is `icon.file_missing` one element type over, reusing
+the same directory check. Two rules do not pay for a folder, and the rule prefix
+keeps them findable; the capability README states the boundary rather than leaving
+it to be noticed.
+
+**Why captions are the exception, when they look like the easiest item here.** A
+`<track kind="captions">` presence check is markup and would take ten lines. It is
+not written because presence is not the thing that matters: an empty, mistimed or
+wrong-language track passes it. A page reported clean then reads as a page whose
+captions were checked, which is a clearance the tool would not have earned — D30's
+failure, arriving as a *new* rule rather than as a missing one. Naming the limit
+costs one paragraph.
+
+**One consistency fix carried along.** `images` resolved its directory as
+`Path(config.static_dir)` while `pages` resolves it through `find_static_dir()`. A
+workspace whose `static_dir` is its own root and which builds into `public/` would
+therefore have had icons and posters checked against the wrong directory — a
+latent wrong answer of exactly the kind the file-existence rules exist to prevent.
+Both now use the shared resolver.

@@ -225,6 +225,69 @@ def og_image_absolute(page: Page) -> list[dict]:
     return []
 
 
+# --- video rules -----------------------------------------------------------
+#
+# `<video>` is checked here rather than in a capability of its own because the
+# mechanism is the one this capability already has: something declared in the
+# markup, checked against what the build emitted. Two rules would not pay for a
+# third folder, and a rule prefix of its own keeps them findable.
+#
+# Captions are deliberately not checked. A `<track>` presence check is markup and
+# would be easy; whether the captions are *right* needs a person, and reporting
+# presence only would read as a clearance. `references/video.md` says so.
+
+def video_poster_missing(page: Page) -> list[dict]:
+    """A video with no poster paints a black rectangle until it is played."""
+    if not page.videos:
+        return []
+    without = sum(1 for video in page.videos if not video["poster"])
+    if not without:
+        return []
+    return [_finding(
+        "video.poster_missing", WARNING,
+        f"{without}/{len(page.videos)} <video> declare no poster. Until it is "
+        f"played, a video without one is a black rectangle — and a poster can be "
+        f"a real image, not only a first frame.",
+        without, 0, page.source, "body > video")]
+
+
+def video_poster_file_missing(page: Page, root: Path | None) -> list[dict]:
+    """A poster the build never emitted: the same silent fault as a missing icon."""
+    if root is None:
+        return []
+    findings = []
+    for video in page.videos:
+        poster = video["poster"]
+        if not poster or poster.startswith(("http://", "https://", "data:")):
+            continue
+        if not (root / poster.lstrip("/")).is_file():
+            findings.append(_finding(
+                "video.poster_file_missing", CRITICAL,
+                f"A <video> declares a poster the build does not contain: {poster}",
+                None, poster, page.source, "body > video"))
+    return findings
+
+
+def video_preload_unset(page: Page) -> list[dict]:
+    """No video on the page says how eagerly it should be fetched.
+
+    Per page rather than per video, exactly as the two `loading` rules are: a page
+    where nothing declares a `preload` has one decision to make, not four. Absent
+    leaves it to the browser, which for a large file is a real cost on a page
+    whose video is not the reason anyone came.
+    """
+    if not page.videos:
+        return []
+    if any(video["preload"] for video in page.videos):
+        return []
+    return [_finding(
+        "video.preload_unset", WARNING,
+        f"None of {len(page.videos)} <video> declares a preload strategy, so the "
+        f"browser decides. `preload=\"metadata\"` or `\"none\"` bounds what a "
+        f"visitor downloads before they asked for the video.",
+        None, 'preload="metadata" or "none"', page.source, "body > video")]
+
+
 RULES = (
     image_src_missing,
     image_dimensions,
@@ -234,6 +297,11 @@ RULES = (
     image_lazy_loading,
     og_image_absolute,
 )
+
+# Rules that need the build directory rather than the page. They leave `rules_run`
+# in a live run, because a rule that cannot fire must never read as one that found
+# nothing.
+STATIC_ONLY: tuple[str, ...] = ("icon.file_missing", "video.poster_file_missing")
 
 CHECKS: tuple[str, ...] = (
     "image.src_missing",
@@ -246,6 +314,9 @@ CHECKS: tuple[str, ...] = (
     "image.og_relative",
     "icon.none_declared",
     "icon.file_missing",
+    "video.poster_missing",
+    "video.poster_file_missing",
+    "video.preload_unset",
 )
 
 
@@ -255,18 +326,25 @@ def audit_page(page: Page, root: Path | None = None) -> list[dict]:
         findings += rule(page)
     findings += icons_declared(page)
     findings += icon_files_present(page, root)
+    findings += video_poster_missing(page)
+    findings += video_poster_file_missing(page, root)
+    findings += video_preload_unset(page)
     return findings
 
 
 def run(config, live: bool = False, run: str | None = None, **_) -> dict[str, Any]:
     page_set = pages.resolve(config, live=live, run=run)
-    # icon.file_missing compares a declared href against files in a build
-    # directory. A live crawl has no directory, so the rule cannot run and says
+    # The two file-existence rules compare a declared path against files in a
+    # build directory. A live crawl has no directory, so they cannot run and say
     # so rather than passing vacuously — a rule that cannot fire must not be
     # reported as a rule that found nothing.
-    root = Path(config.static_dir) if page_set.mode == "static" else None
+    #
+    # `find_static_dir` rather than `config.static_dir`: a workspace whose
+    # `static_dir` is its own root and which builds into `public/` would otherwise
+    # have its icons checked against the wrong directory.
+    root = pages.find_static_dir(config.static_dir) if page_set.mode == "static" else None
     active_checks = list(CHECKS) if root is not None else [
-        c for c in CHECKS if c != "icon.file_missing"
+        c for c in CHECKS if c not in STATIC_ONLY
     ]
 
     findings: list[dict] = []

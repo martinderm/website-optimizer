@@ -31,6 +31,9 @@ only; the value itself is authored prose and a report has no use for it.
 | `image.og_relative` | warning | `og:image` is not an absolute URL — scrapers do not resolve it |
 | `icon.none_declared` | warning | no favicon or app icon declared |
 | `icon.file_missing` | critical | an icon is declared but the file is not in the build output |
+| `video.poster_missing` | warning | a `<video>` declares no poster — a black rectangle until played |
+| `video.poster_file_missing` | critical | a declared poster is not in the build output |
+| `video.preload_unset` | warning | no `<video>` on the page declares a preload strategy |
 
 `width="100%"` does not count as a dimension: the check requires a number,
 because that is what reserves space.
@@ -53,6 +56,19 @@ that lazy-loads nothing has one problem, not two hundred.
 `icon.file_missing` is the one that needs the directory: an icon declared in the
 head of every page but never emitted by the build is the classic silent fault,
 and no single-page view can see it.
+
+## Why the video rules live here
+
+`<video>` is checked by this capability rather than by one of its own, because the
+mechanism is the one already here: something declared in the markup, checked
+against what the build emitted. `video.poster_file_missing` is `icon.file_missing`
+one element type over. Two rules do not pay for a third folder, and the rule prefix
+keeps them findable.
+
+**Captions are deliberately not checked.** A `<track>` presence check would be
+markup and easy; whether the captions are *correct* needs a person. Reporting
+presence alone would read as a clearance, which is worse than the silence it
+replaced. `references/video.md` states the limit next to the guidance.
 
 ## Known limits
 

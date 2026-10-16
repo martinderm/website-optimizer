@@ -19,7 +19,7 @@ reference set is complete, and `docs/system-map/` maps the tool contracts.
 |---|---|
 | `wo.py on-page` | SEO and accessibility signals inside a page |
 | `wo.py redirects` | do redirect rules match what the live server does |
-| `wo.py images` | image delivery, dimensions, formats, icons |
+| `wo.py images` | image delivery, dimensions, formats, icons, video posters |
 | `wo.py schema` | JSON-LD structure and completeness |
 | `wo.py links` | the internal link graph: broken targets, orphans, depth |
 | `wo.py crawler-files` | robots.txt, the sitemap and llms.txt |

@@ -56,6 +56,11 @@ is blank until the first frame arrives.
 - `width` and `height` here too, for the same layout-stability reason as images.
 - The poster should match the first frame's framing so playback does not jump.
 
+**Measured by** `images`: `video.poster_missing` counts the `<video>` elements on
+a page without a poster; `video.poster_file_missing` reports a poster the build
+never emitted, which is `icon.file_missing` one element type over. A remote poster
+is not checked, because it is not in the build to check.
+
 ## Loading strategy
 
 | Attribute | Effect | Use when |
@@ -67,6 +72,12 @@ is blank until the first frame arrives.
 A poster plus `preload="none"` costs a visitor nothing until they choose to watch.
 That is almost always right.
 
+**Measured by** `images`: `video.preload_unset` fires once per page when no
+`<video>` on it declares any strategy, exactly as `image.loading_unset` does for
+images and for the same reason — one decision was left unmade, not four. It does
+not report a *partially* declared page: unlike the image case, the reference above
+gives one right answer for video, so a page that declares something has answered.
+
 For video embedded in a page that also contains other media, prefer
 `preload="none"` plus a facade: a poster image that loads the real player on
 click. Third-party players otherwise pull megabytes of script and telemetry
@@ -77,6 +88,12 @@ permitted and is an accessibility decision, not a default.
 
 ## Captions and transcripts
 
+**Not measured, and the reason is worth keeping.** A `<track kind="captions">`
+presence check is markup and would be easy to write. It is not written, because
+presence is not the thing that matters: a track that is empty, mistimed, or in the
+wrong language passes it, and a page reported clean reads as a page whose captions
+were checked. That is a clearance this tool would not have earned, which is worse
+than the silence it would replace.
 - **Captions** are timed text for people who cannot hear. `kind="captions"`.
 - **Transcripts** are prose for people who cannot watch, for search, and for
   anyone who prefers to read. `kind="descriptions"` is a different thing —

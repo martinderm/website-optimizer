@@ -62,6 +62,10 @@ class Page:
     # hidden — anchor-text quality is a rule this tool cannot measure, and
     # `references/internal-linking.md` says so next to the guidance.
     links: list[dict] = field(default_factory=list)
+    # `<video>` facts the images capability checks. A video normally carries its
+    # sources as `<source>` children rather than a `src`, so absence of `src` is
+    # not a defect and is not recorded.
+    videos: list[dict] = field(default_factory=list)
 
     @property
     def description_length(self) -> int:
@@ -113,6 +117,11 @@ class _Extractor(HTMLParser):
             # module deciding it is not one.
             if "href" in attr:
                 self.page.links.append({"href": href.strip()})
+        elif tag == "video":
+            self.page.videos.append({
+                "poster": attr.get("poster", "").strip(),
+                "preload": (attr.get("preload") or "").strip().lower() or None,
+            })
         elif tag == "img":
             self.page.images_total += 1
             alt_present = "alt" in attr

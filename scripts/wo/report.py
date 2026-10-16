@@ -49,7 +49,8 @@ TOOL_NAME = "website-optimizer"
 # result did. A partially readable sitemap index no longer counts as coverage, so
 # two sites with the same `rules_run` can report differently across this version
 # and a receipt should say which side of it the run was on.
-TOOL_VERSION = "0.6.1"
+# 0.7.0 added three rules to `images`: video posters and preload.
+TOOL_VERSION = "0.7.0"
 
 # The artifact metadata contract. The authoritative schema lives in
 # agent-architecture; it is not copied here, because one definition of the
