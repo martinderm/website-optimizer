@@ -86,3 +86,8 @@ the sitemap" actually means. Consequences worth knowing:
   decision, not a measurement.
 - **Fragment targets.** `/a/#section` resolves to `/a/`; whether `#section`
   exists in that document is not checked.
+- **One URL with two pages.** A build holding both `a.html` and `a/index.html`
+  serves `/a` twice; the graph follows whichever it reads first and does not
+  report the collision. Hugo and WordPress do not emit that pair.
+- **A relative link whose first segment contains a colon** (`foo:bar/baz`) is read
+  as a URL scheme and skipped, because that is what a browser would do.

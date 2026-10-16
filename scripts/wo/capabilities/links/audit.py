@@ -146,9 +146,15 @@ def build_served(root: Path) -> set[str]:
 
 
 def _page_aliases(source: str) -> set[str]:
-    """The keys that name one built page, so a link can be tied to it."""
+    """The keys that name one built page, so a link can be tied to it.
+
+    These are the same spellings `build_served` accepts, and they have to stay
+    that way: one function decides whether a link resolves, this one decides
+    which page it resolves to. An alias the first accepts and the second misses
+    is a link that exists and leads nowhere in the graph.
+    """
     if source == "index.html":
-        return {"/"}
+        return {"/", _key("/index.html")}
     if source.endswith("/index.html"):
         return {_key("/" + source), _key("/" + source[: -len("index.html")])}
     aliases = {_key("/" + source)}
@@ -158,6 +164,13 @@ def _page_aliases(source: str) -> set[str]:
 
 
 def _page_alias_map(page_list) -> dict[str, str]:
+    """One page per key. First page wins a contested key.
+
+    A build holding both `a.html` and `a/index.html` gives `/a` two pages; the
+    graph follows whichever comes first and does not report the collision. Hugo
+    and WordPress do not produce that pair, so this is a named limit rather than
+    a rule — see the README.
+    """
     aliases: dict[str, str] = {}
     for page in page_list:
         for alias in _page_aliases(page.source):

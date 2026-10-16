@@ -201,6 +201,34 @@ class DepthTest(unittest.TestCase):
 
 
 class ContractTest(unittest.TestCase):
+    def test_every_spelling_a_server_answers_names_its_page(self):
+        """The spellings, written out as a table rather than derived from the code.
+
+        `build_served` decides whether a link resolves; `_page_aliases` decides
+        which page it resolves to. An alias the first accepts and the second
+        misses is a link that exists and leads nowhere in the graph. Found by
+        reading the two functions next to each other: `/index.html` was served
+        and named no page, while every other page had both of its spellings.
+
+        A table, and not a derivation, because the defect was an omission. A test
+        that computed the spellings the way the code does would have omitted the
+        same one and passed.
+        """
+        spellings = {
+            "index.html": ("/", "/index.html"),
+            "a/index.html": ("/a", "/a/index.html"),
+            "b.html": ("/b", "/b.html"),
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pages = _write_site(root, {rel: "<p>x</p>" for rel in spellings})
+            served = links.build_served(root)
+        aliases = links._page_alias_map(pages)
+        for source, forms in spellings.items():
+            for form in forms:
+                self.assertIn(form, served, f"the build does not serve {form}")
+                self.assertEqual(aliases.get(form), source, f"{form} must name {source}")
+
     def test_checks_covers_every_rule_a_page_set_can_emit(self):
         result = _audit({
             "index.html": '<a href="/gone/">broken</a><a href="/p1/">1</a>',
