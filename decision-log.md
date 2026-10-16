@@ -1099,3 +1099,43 @@ minute of work and it is the difference between chasing a phantom and not.
 for reasons this cannot see — has no detection. Naming it is what D45 does;
 detecting it would mean crawling twice and comparing the two crawls to each other,
 which doubles the most expensive thing this tool does.
+
+---
+
+## D46 - An nginx server block is not an .htaccess, and the parser says so
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** `redirects` raises `MappingError` naming the nginx trap and the way
+out, instead of a bare `FileNotFoundError` that escaped as a traceback.
+
+**Reason:** writing the documentation sent me to read the code, and the code
+said something the docs did not. `load_mappings` routes any `.conf` to
+`parse_htaccess`, which reads `Redirect` and `RewriteRule`. An nginx `server`
+block uses neither - it writes `return 301` and `rewrite`.
+
+Measured, not assumed: an nginx vhost with a `return` and a `rewrite` parses to
+**zero** mappings; the same two rules written Apache-style parse to two. No error
+is raised, because nothing went wrong as far as the parser is concerned - the file
+was read successfully and contained nothing it recognises.
+
+That is the most dangerous shape a redirect audit can take. It is why `redirects`
+is switched off for WordPress rather than left to report on a database, and it is
+the same failure arriving through the front door.
+
+**The second defect was in the failure itself.** Both error paths raised
+`FileNotFoundError`, which is not a `CapabilityError`, so the entry point's
+`except CapabilityError` never caught it and the command died on a traceback. That
+contradicts the module's own contract - `CapabilityError` carries the rule that a
+failure must be actionable on its own, and a stack trace is not guidance. Caught
+only because the nginx case sent me looking at a path I had assumed worked.
+
+**What the message now says.** An nginx block is not an `.htaccess`; the parser
+does not read `return` or `rewrite`; here is the export format that it does read.
+
+**Still no support for reading nginx or a WordPress database.** D42 weighs the
+options and keeps the decision with the site. What changed is that the way in
+through the wrong file is now loud, named, and actionable - which is what makes
+"decide at the point of need" safe to recommend.

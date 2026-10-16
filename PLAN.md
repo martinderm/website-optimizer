@@ -59,7 +59,7 @@ line says otherwise.
 website-optimizer/
 ├── SKILL.md                  router + source-of-truth table
 ├── PLAN.md                   this file
-├── decision-log.md           durable decisions D1–D45
+├── decision-log.md           durable decisions D1–D46
 ├── README.md
 ├── LICENSE                   MIT
 ├── references/               13 files
@@ -101,7 +101,7 @@ website-optimizer/
 │   │   ├── images-report.schema.json
 │   │   ├── schema-report.schema.json
 │   │   └── compare-report.schema.json
-│   └── tests/                155 stdlib unittest cases
+│   └── tests/                158 stdlib unittest cases
 └── docs/system-map/          ICM Form 6
     ├── README.md  + byte-identical AGENTS.md + routing.md
     ├── CONTEXT.md
@@ -113,7 +113,7 @@ website-optimizer/
 ```
 
 The parity tests are gone with both reference implementations. `test_crawl.py` and
-`test_config.py` replaced them: 155 cases that need no network and no browser.
+`test_config.py` replaced them: 158 cases that need no network and no browser.
 
 Rationale for the phase order is in section 8.
 
@@ -495,7 +495,7 @@ wall guard), D35 (UTF-8, not the terminal's encoding), D36 (no shell).
   workspace README and the runbook, because a migration that quietly drops a
   feature reads as equivalence.
 - ~~Decide on CI~~ decided 2026-10-16: no CI, run manually at launch or on
-  demand. D39. The 155 tests run in under three seconds and need no network. The
+  demand. D39. The 158 tests run in under three seconds and need no network. The
   cost is that a rule regression now reaches a site audit before anyone notices;
   revisit if the skill is bound in more than two workspaces.
 

@@ -29,6 +29,20 @@ Ziel war ein Beispiel-Slug, ein 404 dort wäre ein Fehlalarm.
 CSV-Mappings; `clean_regex_to_path` macht aus einem Regex einen anfragbaren Pfad
 und meldet, ob es eine Wildcard ist.
 
+**Eine nginx-Konfiguration ist keine `.htaccess`, und der Parser liest sie still
+als leer** (D46). `load_mappings` schickt jede `.conf` an `parse_htaccess`; nginx
+schreibt aber `return 301` und `rewrite`, nicht `Redirect` und `RewriteRule`.
+Gemessen: ein nginx-vhost mit `return` und `rewrite` ergibt **null Mappings**, die
+gleichen zwei Regeln in Apache-Schreibweise ergeben zwei. Kein Fehler — die Datei
+ließ sich lesen, sie enthielt nur nichts Erkennbares. Das ist die gefährlichste
+Form eines Redirect-Audits: ein sauberes Zeugnis für eine Site, die Traffic
+weiterleitet.
+
+Der Ausweg steht in der Fehlermeldung: Mappings als JSON, CSV oder TSV
+exportieren und `[redirects] file` auf den Export zeigen lassen. Gelesen wird der
+Export, geprüft wird gegen den Live-Server — und das ist ohnehin die Prüfung, auf
+die es ankommt.
+
 `scripts/wo/capabilities/redirects/audit.py` — `probe` stellt die Quelle mit
 einem Handler, der Weiterleitungen offenlegt statt ihnen zu folgen, und
 vergleicht `Location` mit dem konfigurierten Ziel. `_findings_from_row` leitet

@@ -139,12 +139,25 @@ they cannot:
 |---|---|---|
 | Apache | `.htaccess` or vhost config | yes |
 | Netlify / Cloudflare Pages | `_redirects` | yes |
-| nginx | `server` block in the site config | yes, but only on the server |
+| nginx | `server` block in the site config | **no — and it fails silently, see below** |
 | WordPress | database — core, Redirection, or an SEO plugin | no |
 
 The last row is the one that bites. WordPress has no `.htaccess` on nginx, and
 its redirects are rows in a database whose shape changes with every plugin
 update.
+
+### Do not point an nginx vhost at this tool
+
+An nginx `server` block is not an `.htaccess`. nginx writes `return 301` and
+`rewrite`; Apache writes `Redirect` and `RewriteRule`. Pointing the audit at an
+nginx config parses **zero** rules and reports nothing, because there is no error
+to raise — the file was read successfully, it simply contained nothing it
+recognised. That is the most dangerous shape a redirect audit can take: a clean
+bill of health for a site that redirects traffic.
+
+Export the mappings instead — JSON, CSV or TSV is what the tool reads — and let
+it check that export against the live server, which is the check that actually
+matters.
 
 **Weigh these before choosing a source:**
 

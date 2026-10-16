@@ -75,6 +75,23 @@ site, not to this capability.
 already carries `source.kind`; a new source is a new value there, and a run that
 cannot say where it read from is indistinguishable from a run that found nothing.
 
+### nginx
+
+`load_mappings` routes any `.conf` to `parse_htaccess`, which reads `Redirect` and
+`RewriteRule`. An nginx `server` block uses neither — it writes `return 301` and
+`rewrite` — so pointing `[redirects] file` at one yields **zero mappings and no
+error**: the file parsed fine and contained nothing recognisable.
+
+Measured, not assumed: an nginx vhost with a `return 301` and a `rewrite` gives
+0 mappings, the same rules written Apache-style give 2. `run()` does raise on an
+empty parse, so the failure is loud once the run starts — but anyone reading the
+mapping list, or catching the error late, should know that `.conf` means
+Apache-shaped here.
+
+Export the mappings to JSON, CSV or TSV instead. Those are read natively, and
+the run then verifies that export against the live server, which is the check that
+matters.
+
 ## Adding a file type
 
 Add a parser in `parse.py` returning `list[tuple[source, target, wildcard]]`, a

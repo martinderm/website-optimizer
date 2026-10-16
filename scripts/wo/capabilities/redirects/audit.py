@@ -178,13 +178,21 @@ def run(config, **_ignored) -> dict[str, Any]:
     try:
         mappings = dedupe(load_mappings(redirect_file))
     except MappingError as exc:
-        raise FileNotFoundError(str(exc)) from exc
+        # MappingError, not FileNotFoundError. The entry point only catches
+        # CapabilityError, so a bare OSError type here escapes as a traceback —
+        # and this module's own contract is that a failure arrives as a message
+        # that says what to do, never as a stack trace.
+        raise MappingError(str(exc)) from exc
 
     if not mappings:
-        raise FileNotFoundError(
+        raise MappingError(
             f"{redirect_file.name} contains no redirect rules.\n"
             f"Check that the rules use a status the parser recognises, or that the "
-            f"file is the one this site actually serves."
+            f"file is the one this site actually serves.\n"
+            f"**An nginx server block is not an .htaccess.** It uses `return` and "
+            f"`rewrite`, which this parser does not read, so an nginx config yields "
+            f"zero mappings rather than an error. Export the mappings to JSON, CSV "
+            f"or TSV instead and point [redirects] file at the export."
         )
 
     opener = urllib.request.build_opener(_NoRedirectHandler)

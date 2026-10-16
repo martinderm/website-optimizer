@@ -60,6 +60,13 @@ Envelope, keinen Traceback. Alle Fehler laufen über eine gemeinsame
 `CapabilityError`-Basis (`wo/errors.py`), damit der Einstiegspunkt pro Capability
 keine Sonderbehandlung braucht.
 
+**Diese Basis ist keine Konvention, sie ist der Mechanismus.** `wo.py` fängt
+ausschließlich `CapabilityError`. Ein geworfener `FileNotFoundError` oder
+`OSError` aus einer Capability ist damit kein Fehlerpfad, sondern ein Absturz mit
+Traceback — genau das, was der Satz darüber ausschließt (D46). Wer in einer
+Capability eine neue Fehlerart einführt, muss sie von `CapabilityError` ableiten
+oder sie kommt beim Nutzer als Stacktrace an.
+
 - [scripts/wo.py](../../../scripts/wo.py) — `:64` (_run_capability), `:153` (main)
 - [scripts/wo/capabilities/__init__.py](../../../scripts/wo/capabilities/__init__.py) — `REGISTRY`
 

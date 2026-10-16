@@ -13,6 +13,7 @@ from wo.capabilities.redirects import audit as redirect_audit  # noqa: E402
 from wo.capabilities.redirects.parse import (  # noqa: E402
     MappingError, clean_regex_to_path, dedupe, load_mappings,
 )
+from wo.config import SiteConfig  # noqa: E402
 
 HTACCESS = """\
 # sample
@@ -110,6 +111,54 @@ class ParserTest(unittest.TestCase):
     def test_dedupe_keeps_first_seen_order(self):
         mappings = [("/a", "/b", False), ("/a", "/b", False), ("/c", "/d", True)]
         self.assertEqual(dedupe(mappings), [("/a", "/b", False), ("/c", "/d", True)])
+
+
+class UnreadableRulesTest(unittest.TestCase):
+    """A source this parser cannot read must arrive as a message, not a crash.
+
+    An nginx server block uses `return` and `rewrite`, which parse_htaccess does
+    not recognise, so an nginx config yields zero mappings rather than an error.
+    The failure has to be a CapabilityError: the entry point only catches that
+    one, and anything else escapes as a traceback — which is the opposite of the
+    guidance the error text gives.
+    """
+
+    def _config(self, path: Path):
+        return SiteConfig(
+            site_url="https://example.com", domain="example.com",
+            static_dir=path.parent / "public", workspace_root=path.parent,
+            redirects={"file": str(path), "check_target": False, "timeout": 1},
+        )
+
+    def test_nginx_config_raises_a_mapping_error_not_an_os_error(self):
+        nginx = (
+            "server {\n"
+            "    server_name example.com;\n"
+            "    return 301 https://example.com$request_uri;\n"
+            "}\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "vhost.conf"
+            path.write_text(nginx, encoding="utf-8")
+            with self.assertRaises(MappingError) as ctx:
+                redirect_audit.run(self._config(path))
+
+    def test_the_message_names_the_nginx_trap_and_the_way_out(self):
+        """A reader who does not know this will call the site healthy."""
+        nginx = "server {\n  return 301 https://example.com$request_uri;\n}\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "vhost.conf"
+            path.write_text(nginx, encoding="utf-8")
+            with self.assertRaises(MappingError) as ctx:
+                redirect_audit.run(self._config(path))
+        message = str(ctx.exception)
+        self.assertIn("nginx", message)
+        self.assertIn("JSON, CSV", message)
+
+    def test_a_missing_file_also_arrives_as_a_mapping_error(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(MappingError):
+                redirect_audit.run(self._config(Path(tmp) / "gibt-es-nicht.htaccess"))
 
 
 class FindingTest(unittest.TestCase):
