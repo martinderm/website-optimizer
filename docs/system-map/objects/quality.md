@@ -80,5 +80,26 @@ Gehört zu [On-Page](on-page.md), [Page](page.md), [Site-Config](site-config.md)
 `python -m unittest discover -s tests -p "test_*.py"` aus `scripts/`.
 Lokal ausgeführt; kein CI-Anschluss eingerichtet — das ist eine offene Lücke.
 
+`test_system_map.py` bewacht die Karte selbst. Drei Drift-Arten, jede davon in
+dieser Woche einmal real passiert:
+
+- **Eine zitierte Regel-ID muss existieren.** Eine ausgeschriebene ID ist ein
+  Zitat; ein Zitat auf etwas Umbenanntes ist Drift mit einer falschen Antwort
+  darin. Der Test hat sofort eine gefunden: `audit-report.md` zeigte auf
+  `scripts/schemas/audit-report.schema.json`, das seit D23 in `report-base` plus
+  je ein Schema pro Capability zerlegt wurde.
+- **Jede Karte muss vom Index erreichbar sein.** Eine Karte, die niemand verlinkt,
+  ist eine Karte, die niemand liest.
+- **Die Zwillinge müssen bytegleich sein.** Eine auseinandergelaufene Kopie ist
+  schlimmer als keine: zwei Dateien, die wie dasselbe Dokument aussehen und sich
+  widersprechen.
+
+**Was der Test ausdrücklich nicht verlangt:** dass die Karte jede Regel auflistet.
+Die Karte ist eine Karte, keine Spezifikation. Eine Karte, die den Regelsatz
+aufzählt, dupliziert `CHECKS` — und das Duplikat ist das, was veraltet.
+`on-page.md` nennt seine Regeln in Kurzprosa (`lang`, `h1`, `og:title`), das ist
+eine Beschreibung; sie in achtzehn volle IDs zu zwingen machte sie zur zweiten
+Wahrheitsquelle.
+
 ## See
 [scripts/README.md](../../../scripts/README.md). [Änderungsrouting](../effects/CONTEXT.md).

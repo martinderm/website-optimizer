@@ -1173,3 +1173,47 @@ is not.
 becomes a trigger: build when a site has redirects that are not in a file and
 someone asks for the audit. Until then, switching the capability off per site,
 with the reason in the config, is the whole answer.
+
+---
+
+## D48 - The map is guarded where it cannot be duplicated
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** `test_system_map.py` checks three things: every rule identifier a
+card writes out exists in `CHECKS`; every card is reachable from its index; and
+the generated twins are byte-identical to `README.md`. It does **not** require the
+map to list every rule.
+
+**Reason:** the same drift happened three times in one week - a rule is added or
+split, and the card describing the rule set keeps describing the old one. The code
+has a round-trip guard between `CHECKS` and the rules a capability can emit; the
+map had nothing.
+
+**Why not the obvious check.** "Every rule must appear in the map" is the
+tempting one and it is the wrong one. The map is a map, not a specification. A
+card that enumerates the full rule set duplicates `CHECKS`, and the duplicate is
+the thing that goes stale - the guard would create the drift it exists to catch.
+`on-page.md` names its rules in prose (`lang`, `h1`, `og:title`); that is a
+description, and forcing it into eighteen identifiers would make it a second
+source of truth.
+
+**What is checked instead.** A rule identifier written out in full is a
+*citation*, and a citation to something renamed is drift with a wrong answer in
+it. That direction can be checked without turning cards into tables.
+
+**It found something on the first run.** `audit-report.md` cited
+`scripts/schemas/audit-report.schema.json` - the single schema that D23 split into
+`report-base` plus one per capability. The card had been describing the base
+contract correctly all along and pointing at a file that no longer existed.
+
+**The structural checks matter as much as the rule one.** A card nobody links to
+is a card nobody reads, and a twin that has drifted is two files that look like
+the same document and disagree - both mechanical, both reading as complete.
+
+**Verified to fail, not assumed to.** Each of the three was introduced
+deliberately and the test reported it: a renamed identifier with the card named,
+an unlinked card, and a twin with one extra line. A guard that cannot fail is
+decoration.

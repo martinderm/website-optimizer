@@ -3,8 +3,8 @@ type: object
 cluster: interface
 universe: live
 status: verified
-entity: scripts/schemas/audit-report.schema.json
-verified_at: 2026-10-15
+entity: scripts/schemas/report-base.schema.json
+verified_at: 2026-10-16
 revision: a2dda236b34e6222be84c6068d84203f340219a8
 ---
 
