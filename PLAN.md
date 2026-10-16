@@ -59,7 +59,7 @@ line says otherwise.
 website-optimizer/
 ├── SKILL.md                  router + source-of-truth table
 ├── PLAN.md                   this file
-├── decision-log.md           durable decisions D1–D49
+├── decision-log.md           durable decisions D1–D52
 ├── README.md
 ├── LICENSE                   MIT
 ├── references/               13 files
@@ -93,6 +93,7 @@ website-optimizer/
 │   │       ├── redirects/    ← live: do redirect rules match reality
 │   │       ├── images/       ← delivery, dimensions, icons, static or live
 │   │       ├── schema/       ← JSON-LD structure and completeness
+│   │       ├── links/        ← the internal link graph, build output only
 │   │       └── compare/      ← meta: attribute differences between two runs
 │   ├── schemas/
 │   │   ├── report-base.schema.json        shared by every report
@@ -100,14 +101,15 @@ website-optimizer/
 │   │   ├── redirects-report.schema.json
 │   │   ├── images-report.schema.json
 │   │   ├── schema-report.schema.json
+│   │   ├── links-report.schema.json
 │   │   └── compare-report.schema.json
-│   └── tests/                169 stdlib unittest cases
+│   └── tests/                191 stdlib unittest cases
 └── docs/system-map/          ICM Form 6
     ├── README.md  + byte-identical AGENTS.md + routing.md
     ├── CONTEXT.md
     ├── _meta/schema.md
     ├── _templates/{object,process}.md
-    ├── objects/              15 cards + CONTEXT.md + _index.md
+    ├── objects/              16 cards + CONTEXT.md + _index.md
     ├── processes/            audit-static, audit-live, compare-baseline
     └── effects/CONTEXT.md
 ```
@@ -142,6 +144,7 @@ python scripts/wo.py on-page                 # static output
 python scripts/wo.py redirects                # live redirect rules
 python scripts/wo.py images                   # image delivery and icons
 python scripts/wo.py schema                   # JSON-LD structure
+python scripts/wo.py links                    # internal link graph
 python scripts/wo.py compare                  # attribute changes between runs
 python scripts/wo.py runs                     # list stored runs
 python scripts/wo.py validate-report FILE    # validate against a capability schema
@@ -169,9 +172,10 @@ generated output, a live crawl would render the same page interface. Every
 downstream capability is written against the page interface, not against a build
 directory.
 
-**Built today:** `on-page`, `images` and `schema` all take the static path;
-`redirects` is live by nature and returns `crawl_mode: live`. The live *page*
-crawl is round 5. `compare` reads any two runs that share a capability.
+**Built today:** `on-page`, `images`, `schema` and `links` all take the static
+path; `redirects` is live by nature and returns `crawl_mode: live`, and `links`
+refuses a live run because a partial graph would describe the crawl rather than
+the site. `compare` reads any two runs that share a capability.
 
 ### 4.3 The site workspace owns the run, in its declared data zones
 
@@ -551,6 +555,39 @@ The guard checks citations rather than completeness, and the distinction is the
 whole design: demanding that every rule appear in the map would make it a second
 source of truth, which is what goes stale. It found a real stale reference on its
 first run. D48.
+
+### Round 10 — the internal link graph (done)
+
+Asked what the skill was still missing, well after it was finished, the answer was
+one shape repeated: a reference file describing something no rule measured.
+`internal-linking.md` was 102 lines about orphan pages, anchor text and crawl
+budget with nothing behind any of it — and broken internal links, the commonest
+architectural defect there is, were not visible at all. `page.py` read `<a>` for
+exactly one thing: whether it was a skip link.
+
+Four more gaps came out of the same review and are filed as issues rather than
+fixed here — `robots.txt` and sitemap integrity, `hreflang`, pagination, video
+delivery, and the redirects source D47 deferred. This round closed the one that
+was both common and invisible.
+
+**What landed.** `Page.links`, carrying `href` and nothing else, because an
+anchor's text is authored prose and D13 has no place for it (D50). A sixth
+capability with three rules: a URL the build does not serve, a page nothing
+reaches from `/`, and a page four or more clicks deep (D51). Static only, and it
+raises on `--live` rather than drawing a graph of a crawl and calling it the
+site. One finding per missing URL rather than one per linking page (D52).
+
+**Measured on the reference site, first run:** 173 pages, 2884 internal links, 3
+broken targets, 7 unreachable pages, 0 deep. Every one was checked by hand in the
+markup. The three broken links are absolute `www` URLs left from a previous site
+structure that no longer answers; the seven orphans are four generated taxonomy
+lists and three pages of test content the navigation never reaches.
+
+**What this round did not do.** Anchor text, redirect-aware resolution, and links
+added by JavaScript stay out of the graph, each for a stated reason rather than by
+oversight — `capabilities/links/README.md` names them, and
+`references/internal-linking.md` now says which of its own rules the tool cannot
+check.
 
 ---
 

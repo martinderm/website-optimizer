@@ -18,6 +18,7 @@ scripts: two entry points drift apart, and running `wo.py` puts this directory o
 |---|---|
 | `init-site` | write a `site.optimizer.toml` for a site |
 | `on-page` | audit on-page signals in a static output directory |
+| `links` | audit the internal link graph of built output |
 | `redirects` | probe live redirect rules against the running site |
 | `runs` | list stored runs for the configured site |
 | `validate-report` | validate a report; the matching capability schema is autodetected |
@@ -56,6 +57,7 @@ wo/
     redirects/            live rule verification
     images/              image delivery and icons
     schema/              JSON-LD structure
+    links/               the internal link graph (build output only)
     compare/             difference attribution between runs
 schemas/
   report-base.schema.json     fields every report carries
@@ -63,6 +65,7 @@ schemas/
   redirects-report.schema.json extends the base
   images-report.schema.json     extends the base
   schema-report.schema.json     extends the base
+  links-report.schema.json      extends the base
   compare-report.schema.json   extends the base
 tests/                    stdlib unittest, including parity against the originals
 ```
@@ -72,9 +75,9 @@ hyphen is a fine command name and an invalid Python identifier.
 
 ## Network
 
-`redirects` performs live HTTP requests; `on-page` does not. A capability that
-reaches the network is marked `crawl_mode: live` in its report, because a live
-result and a static one are not comparable.
+`redirects` performs live HTTP requests; `on-page`, `images`, `schema` and
+`links` do not. A capability that reaches the network is marked `crawl_mode: live`
+in its report, because a live result and a static one are not comparable.
 
 ## Where output goes
 

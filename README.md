@@ -12,7 +12,7 @@ It measures and advises. It does not build, host, or deploy.
 
 ## Status
 
-Round 5 of 6. Five capabilities work and produce append-only evidence runs, the
+Round 10. Six capabilities work and produce append-only evidence runs, the
 reference set is complete, and `docs/system-map/` maps the tool contracts.
 
 | Command | What it does |
@@ -21,14 +21,17 @@ reference set is complete, and `docs/system-map/` maps the tool contracts.
 | `wo.py redirects` | do redirect rules match what the live server does |
 | `wo.py images` | image delivery, dimensions, formats, icons |
 | `wo.py schema` | JSON-LD structure and completeness |
+| `wo.py links` | the internal link graph: broken targets, orphans, depth |
 | `wo.py compare` | attribute what changed between two runs |
 
 `on-page`, `images` and `schema` take `--live`, which renders pages in a browser
 instead of reading build output. For a static site both paths must agree; for a
-dynamic one only the live path has anything to read.
+dynamic one only the live path has anything to read. `links` is build-only and
+raises on `--live`: a crawl sees part of a site, and a partial graph reports the
+crawl's reach as if it were the site's architecture.
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
-**[decision-log.md](decision-log.md)** carries decisions D1–D49 with their
+**[decision-log.md](decision-log.md)** carries decisions D1–D52 with their
 support level and evidence anchors.
 
 ## Repository layout
@@ -52,6 +55,7 @@ against the tools they replaced:
 | Reports conform to the house schema | receipt validated against `data-zone-artifact.schema.json` |
 | `schema` finds real defects | it found a `sameAs` inconsistency across 171 vs 2 pages |
 | `images` counts correctly | every rule re-counted independently against the built output |
+| `links` finds real defects | 3 broken targets and 7 orphans on the reference site, every one checked by hand in the markup |
 | `--live` agrees with the static build | 25 real pages, all three capabilities, no difference either way |
 
 The live path was checked the only way that means anything: the same pages read
@@ -85,6 +89,11 @@ rather than passing quietly:
 - If most rendered pages are byte-identical, the run raises instead of
   reporting. A consent wall is found on every page and reported as that page's
   content; refusing is more useful than a confident answer about a dialog.
+- `links` has no live mode at all, so it says nothing there. A graph needs every
+  URL the site serves, and a crawl has only the ones inside its limit; the pages
+  beyond it would read as unreachable and every link to them as broken. The
+  capability raises on `--live` and names the way back rather than reporting a
+  number about the crawl as though it were about the site.
 
 ## Scope boundary
 
@@ -125,10 +134,14 @@ and no CI is configured (D39). Those are decisions with reasons, not gaps waitin
 to be filled, so they are not issues. The decision log says why.
 
 The issues that do exist share a shape: a reference file describes something the
-tool cannot measure. `internal-linking.md` is 102 lines about orphan pages and
-depth with no rule behind any of it; nothing checks `robots.txt`, a sitemap or
-`llms.txt`; `hreflang` appears nowhere. The tool is honest about what it claims
-and does; the reference set claims more.
+tool cannot measure. That was the whole of `internal-linking.md` until the link
+graph landed — 102 lines about orphan pages, anchor text and depth with no rule
+behind any of it — and closing it left five more of the same kind: nothing checks
+`robots.txt`, a sitemap or `llms.txt`; `hreflang` appears nowhere; pagination and
+faceted navigation are unaddressed; `video.md` describes poster, preload and
+captions that no rule reads. The tool is honest about what it claims and does; the
+reference set claims more. Reading a reference file as a description of what the
+audit checks is the mistake that list exists to prevent.
 
 ### Standard Template for `AGENTS.md`
 

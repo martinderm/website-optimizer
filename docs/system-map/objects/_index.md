@@ -12,6 +12,7 @@
 - [reference-set](reference-set.md) - live / verified, 2026-10-15
 - [images](images.md) - live / verified, 2026-10-15
 - [schema](schema.md) - live / verified, 2026-10-15
+- [links](links.md) - live / verified, 2026-10-16
 - [quality](quality.md) - live / verified, 2026-10-15
 - [crawl](crawl.md) - live / verified, 2026-10-15
 - [page-set](page-set.md) - live / verified, 2026-10-15

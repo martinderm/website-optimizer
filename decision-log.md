@@ -1284,3 +1284,104 @@ proxy for "more places forgetting to run the suite". The sharper trigger is: a
 defect that a test could have caught and did not, because nobody ran it. That has
 not happened yet - every defect this week was outside test reach - and it is the
 signal that the manual arrangement has actually failed.
+
+---
+
+## D50 - A link's target is a field; its words are prose
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** `Page` gains `links`, and each entry carries `href` and nothing
+else. The text between the tags is not extracted, not shortened, not counted.
+
+**Reason:** `<a href="...">...</a>` is one element with two halves, and D13 draws
+the line between them rather than through the middle of nowhere. A URL is a value
+a rule compares against something; the words are authored prose, and this module
+has no attribute for prose by design. The asymmetry is worth stating because it
+is the kind of thing a later reader changes back by accident.
+
+Storing the *length* of the anchor text was considered and rejected, and the
+rejection is the interesting part: it would let a rule fire on "read more"
+without keeping the words, which sounds like a loophole and is not. "read more"
+and "contact us" are the same length. A count that cannot tell the defect from
+the thing it is not is decoration wearing a rule's name.
+
+**Consequence, named where it costs something.** Anchor text is the one part of
+`references/internal-linking.md` the tool cannot check, and that file now says so
+in the section itself. Without it a reader would take "0 findings" as "the
+anchors are descriptive", which is the same failure D30 exists to prevent.
+
+---
+
+## D51 - The link graph is its own capability, and it reads a build
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** a sixth capability, `links`. It runs against built output only;
+`run(live=True)` raises and names the way back.
+
+**Why not inside `on-page`.** `on-page` is defined as the signals that live
+*inside a single page*, and every one of its rules is a function of one page.
+A link is a relation between two pages, and the whole point is the set. Growing
+`on-page` would leave it carrying rules its own definition excludes - D11 from
+the other side, where a name that does not match its contents gets invoked for
+the wrong job.
+
+**Why it refuses a crawl.** The graph needs to know every URL the site serves. A
+crawl sees the pages inside its limit and nothing else, so every page beyond that
+limit reads as unreachable and every link to it as broken. The output would be
+confident and wrong, and wrong in the shape D32 named: a number about the crawl
+wearing the authority of a number about the site. `images` drops
+`icon.file_missing` in live mode for the same reason; here the whole capability
+has nothing to say, so it says that instead of reporting zero.
+
+**What the graph means.** Reachability is a breadth-first walk from `/`, not a
+count of inbound links: a page linked only from another unreachable page is
+unreachable, which is what "reachable only from the sitemap" actually means in
+`references/internal-linking.md`. The 404 page is exempt, and a build with no
+`index.html` skips the two graph rules rather than calling every page an orphan.
+
+**One resolution choice inherited from D38.** An absolute link to `www` and one
+to the apex are the same site here, because D38 already established that a site
+canonicalising to `www` while its config names the apex is one site
+misconfigured rather than two. Treating them as different would make the graph
+quietly miss a whole class of internal links.
+
+**Consequence.** A site with no build output cannot use this capability, which
+means the WordPress workspace has no `links` runs. That is stated rather than
+worked around; the alternative was a partial graph, and a partial graph is the
+thing this decision exists to refuse.
+
+---
+
+## D52 - A missing target is one finding, for the URL
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** `link.target_missing` is keyed on the URL that does not exist, and
+names the pages that link it. One URL, one finding, however many pages emit it.
+The other two rules stay per page, because there the page is the subject.
+
+**Reason:** D38 in miniature. A broken link in a site-wide template is one defect
+on one URL and one fix. Reported per linking page it would have been 173
+identical criticals on the reference site's footers alone, and a reader who sees
+the same line a hundred times stops reading the rule - which is how the one
+thing actually wrong disappears inside them.
+
+The second reason is `compare`. A broken URL appearing between two runs is one
+regression when the finding is keyed on the URL, and a hundred when it is not.
+Findings are what a comparison counts, so the granularity here decides whether
+`compare` says something or says nothing at usable volume.
+
+**Measured, on the first run against a real site.** 173 pages, 2884 internal
+links, 3 broken targets and 7 unreachable pages. Every one was checked by hand in
+the markup: three absolute `www` URLs left over from a previous site structure,
+and seven pages nothing links to - four generated taxonomy lists and three pages
+of test content. The reference site's own navigation reaches five URLs, and none
+of the seven is among them.

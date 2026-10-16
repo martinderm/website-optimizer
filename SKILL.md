@@ -15,12 +15,13 @@ description: >-
 
 ## Status
 
-**Round 5 — five capabilities, static and live.**
+**Round 5 — six capabilities, static and live.**
 
 `on-page`, `images` and `schema` audit build output or, with `--live`, pages
-rendered in a real browser; `redirects` probes live rules; `compare` attributes
-what changed. All write append-only evidence runs. The reference set is complete
-and `docs/system-map/` maps the tool contracts.
+rendered in a real browser; `links` audits the internal link graph of a build;
+`redirects` probes live rules; `compare` attributes what changed. All write
+append-only evidence runs. The reference set is complete and `docs/system-map/`
+maps the tool contracts.
 
 Before changing anything in `scripts/`, read
 [`docs/system-map/`](docs/system-map/README.md): it maps the tool contracts and
@@ -35,6 +36,7 @@ python scripts/wo.py redirects             # live redirect rules
 python scripts/wo.py compare               # attribute what changed since the last run
 python scripts/wo.py images                # image delivery, dimensions, icons
 python scripts/wo.py schema                # JSON-LD structure and completeness
+python scripts/wo.py links                 # internal link graph (build output only)
 python scripts/wo.py runs                 # list stored runs
 python scripts/wo.py on-page --dry-run    # audit, write nothing
 
