@@ -1,6 +1,6 @@
 {
   "_comment": "Rule set per capability, for the version it was stamped for. Guarded by test_version_follows_rules.py. Per D43 the version moves when rules_run moves: raise TOOL_VERSION in scripts/wo/report.py, then re-run the suite to refresh this file. Do not edit by hand.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "rules": {
     "images": [
       "icon.file_missing",

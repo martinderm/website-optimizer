@@ -31,7 +31,7 @@ raises on `--live`: a crawl sees part of a site, and a partial graph reports the
 crawl's reach as if it were the site's architecture.
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
-**[decision-log.md](decision-log.md)** carries decisions D1–D52 with their
+**[decision-log.md](decision-log.md)** carries decisions D1–D54 with their
 support level and evidence anchors.
 
 ## Repository layout

@@ -40,7 +40,10 @@ TOOL_NAME = "website-optimizer"
 # provenance, it is decoration. See decision D43.
 # 0.5.0 added the sixth capability: `links`, with three rules, and the `Page.links`
 # field they read. `rules_run` differs on every site from 0.4.1 onwards.
-TOOL_VERSION = "0.5.0"
+# 0.5.1 is a patch, under the "anything else" half of the rule above: the redirects
+# User-Agent stopped restating a version by hand and derives this constant instead.
+# No rule moved, so no fingerprint moved.
+TOOL_VERSION = "0.5.1"
 
 # The artifact metadata contract. The authoritative schema lives in
 # agent-architecture; it is not copied here, because one definition of the

@@ -59,7 +59,7 @@ line says otherwise.
 website-optimizer/
 ├── SKILL.md                  router + source-of-truth table
 ├── PLAN.md                   this file
-├── decision-log.md           durable decisions D1–D52
+├── decision-log.md           durable decisions D1–D54
 ├── README.md
 ├── LICENSE                   MIT
 ├── references/               13 files
@@ -103,7 +103,7 @@ website-optimizer/
 │   │   ├── schema-report.schema.json
 │   │   ├── links-report.schema.json
 │   │   └── compare-report.schema.json
-│   └── tests/                191 stdlib unittest cases
+│   └── tests/                193 stdlib unittest cases
 └── docs/system-map/          ICM Form 6
     ├── README.md  + byte-identical AGENTS.md + routing.md
     ├── CONTEXT.md

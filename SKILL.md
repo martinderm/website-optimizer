@@ -120,3 +120,17 @@ One home per fact. A link beats a copy.
 
 A rule and its check are never maintained in two places. If a rule changes,
 the check that enforces it changes in the same commit.
+
+## Changing this skill
+
+Two steps, both cheap, both earned the hard way. The reasons are D53 and D54.
+
+- **A new guard is shown to fail first.** Run the test against the unfixed
+  behaviour — monkeypatch the fix away — and watch it go red before committing.
+  A guard that cannot fail is decoration, and that sentence was written the same
+  week a guard was written that could not fail, by someone who had just read it.
+- **A rule or interface change is reviewed by a context that did not write it.**
+  The shared `software-engineering-kit` skill `code-review` supplies the two axes,
+  standards and specification, reported separately. It is bound as a method, not
+  as a kernel: no kernel verdicts, no second report schema. A reworded message is
+  not a rule change, and neither is a refactor.

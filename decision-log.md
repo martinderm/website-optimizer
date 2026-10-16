@@ -1385,3 +1385,72 @@ the markup: three absolute `www` URLs left over from a previous site structure,
 and seven pages nothing links to - four generated taxonomy lists and three pages
 of test content. The reference site's own navigation reaches five URLs, and none
 of the seven is among them.
+
+---
+
+## D53 - A new guard is shown to fail before it is committed
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** a test that exists to catch a specific defect is run once against
+the unfixed behaviour and observed red, before the fix is committed. Not implied,
+not reasoned about - run.
+
+**Reason:** D48 closed with "a guard that cannot fail is decoration" and left it
+as a principle. It happened again the same day, to a guard written by someone who
+had just read that sentence. `test_every_spelling_a_server_answers_names_its_page`
+was meant to pin an omission - `/index.html` was served and named no page - and
+its first version derived the spellings the way the implementation does. So it
+omitted the same one and passed, green, against the very defect it was written
+for. The only reason it was caught is that the counter-proof was run as a matter
+of course, and it came back green.
+
+**How, cheaply.** The fixed function is monkeypatched back to its old behaviour
+in a throwaway run and the test is asserted to go red. That is what was done
+here, in a few lines, and it is why the second version of that test is a table
+rather than a derivation: a table can omit nothing silently.
+
+**Consequence.** A guard that cannot be made red is either rewritten or deleted.
+This is the only entry in this log that governs writing rather than the tool: the
+tool is measured by its findings, the work is measured by this. Its own limits are
+real - it proves a guard is load-bearing, never that it is right, and a test can
+be red for the wrong reason.
+
+---
+
+## D54 - A rule or interface change is reviewed by a context that did not write it
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** a change that adds, removes, splits or re-severities a rule, or that
+moves an interface - a schema, the registry, a `Page` field - gets a review by a
+context that did not write it, before it is committed. Message rewording and
+refactors do not.
+
+**Reason:** D39 decided against CI and D49 corrected the reason for it: the tests
+prevent the *known* failures from returning, and every defect that cost this week
+was outside their reach - found by real data, by a second run of a live site, or
+by reading code while writing prose about it. The missing mechanism is therefore
+a reader. But a reader who wrote the code shares its blind spots, and the same
+week produced both halves of that: self-review found the `/index.html` omission,
+and self-review also wrote a guard that could not fail. D53 makes the second half
+mechanical. This entry covers the first half, which no procedure can.
+
+**Mechanism.** The shared `software-engineering-kit` skill `code-review` supplies
+the two axes - standards and specification, reported separately - and the
+`impact-analysis` method in the same kit already mirrors what the system map's
+*If you change this* section does. It is bound as a method, not as a kernel: the
+kit is explicit that without an explicit kernel binding the target's own
+conventions apply, and this repo has no kernel.
+
+**Why not every change.** `impact-analysis` warns against "a blanket reviewer
+round", and the trigger above is the substantive one. A reworded message has
+nothing for a second reader to disagree with that a diff does not already show.
+
+**Consequence.** The reviewer is a fresh context when the environment offers one,
+and this is stated as a limit rather than a promise: on a change made without one
+available, the review is the author's own, and the commit says so.

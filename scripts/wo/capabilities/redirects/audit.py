@@ -29,7 +29,11 @@ CRITICAL = "critical"
 WARNING = "warning"
 REPORT_VERSION = "1"
 REDIRECT_CODES = (301, 302, 307, 308)
-USER_AGENT = "Mozilla/5.0 (compatible; website-optimizer/0.2; +redirect-audit)"
+# Derived, never written out. The literal said `website-optimizer/0.2` while the
+# tool was at 0.4.1: this string is a version claim the tool makes to a stranger's
+# server, and no receipt records it, so nothing could catch it going stale. With
+# the version interpolated it cannot fall behind again.
+USER_AGENT = f"Mozilla/5.0 (compatible; {TOOL_NAME}/{TOOL_VERSION}; +redirect-audit)"
 
 # Rule ids this capability can emit, whether or not they fired. See the note in
 # the on-page capability: a report that lists only failures cannot distinguish

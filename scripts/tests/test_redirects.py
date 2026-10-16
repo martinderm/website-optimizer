@@ -217,5 +217,22 @@ class FindingTest(unittest.TestCase):
         )
 
 
+class UserAgentTest(unittest.TestCase):
+    def test_the_user_agent_states_the_version_the_tool_is(self):
+        """A hand-written version in this string can fall arbitrarily far behind.
+
+        It did: the literal named `website-optimizer/0.2` while the tool was at
+        0.4.1, and nothing noticed, because this is a version claim made to a
+        stranger's server and no receipt records what a server saw. That is D43's
+        defect in the one place its guard cannot reach. Derived from the constant,
+        it cannot drift again — and this test fails the moment someone writes a
+        number back into it.
+        """
+        self.assertIn(
+            f"{redirect_audit.TOOL_NAME}/{redirect_audit.TOOL_VERSION}",
+            redirect_audit.USER_AGENT,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
