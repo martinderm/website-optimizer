@@ -29,7 +29,7 @@ skill** (Negativliste gegen `hugo`, `caddy`, `cloudflare-pages`, `cloudflared`,
 `playwright-cli`, `writing-pro`), Dependencies (`playwright-cli` als erklärte
 Abhängigkeit des Live-Pfads), Run-State-Grenze, Ein-Homes-Tabelle.
 
-`PLAN.md` trägt den Entwurf, `decision-log.md` die D1–D48 mit `support_level`
+`PLAN.md` trägt den Entwurf, `decision-log.md` die D1–D49 mit `support_level`
 und Belegankern. Phasen: 1 Scaffold, 2 eine Capability, 3a References + Stubs, 3b Map,
 4 Capabilities, 5 Live-Crawl, 6 Aufräumarbeiten.
 
@@ -38,7 +38,7 @@ den Zustand nicht erst im Plan suchen muss.
 
 - [SKILL.md](../../../SKILL.md) — Router, Negativliste, Status
 - [PLAN.md](../../../PLAN.md) — §8 Phasen, §4 Skriptentwurf
-- [decision-log.md](../../../decision-log.md) — D1–D48
+- [decision-log.md](../../../decision-log.md) — D1–D49
 
 ## Connected to
 Gehört zu [Referenzsatz](reference-set.md) (was der Router adressiert), [CLI](cli.md) (Quick Start), [Receipt](receipt.md) (Run-State-Grenze).

@@ -883,6 +883,13 @@ the number of places it has to be remembered.
 **What would change the decision:** a third workspace binding, or a rule change
 that is hard to review by eye. Nothing has hit that yet.
 
+**Reviewed 2026-10-16, same day, after eight further decisions.** The decision
+stands; the reason above does not, and the correction matters. See D49.
+
+*(Amended: the "142 tests" figure is now 165. More importantly, that sentence
+implies the tests are the safety net that remains once parity is gone. They are
+not, and this week is the evidence.)*
+
 ---
 
 ## D40 - A question the audit cannot answer is raised, not dropped
@@ -1217,3 +1224,63 @@ the same document and disagree - both mechanical, both reading as complete.
 deliberately and the test reported it: a renamed identifier with the card named,
 an unlinked card, and a twin with one extra line. A guard that cannot fail is
 decoration.
+
+---
+
+## D49 - D39 reviewed: the decision holds, the reason was wrong
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** no CI stands. The justification for it is replaced with one that
+survives contact with this week.
+
+**Reason for reviewing.** D39 was written early in the day and eight decisions
+followed it. Reviewing it against what actually happened is cheaper than trusting
+it.
+
+**What D39 claimed.** That parity was gone, so the tests were "what remains worth
+automating", implying a green suite is the remaining safety net.
+
+**What actually happened.** Of the eight decisions after D39, four were defect
+fixes. Here is how each was found, and whether a test run - CI or otherwise -
+would have caught it:
+
+| Defect | Found by | Green suite? |
+|---|---|---|
+| D43 version frozen across three rule sets | auditing 17 receipts across two workspaces | yes |
+| D44 cross-scope difference called a regression | running `compare` on two real stored runs | yes |
+| D45 crawl not reproducible | a real WordPress re-crawl a day later | yes |
+| D46 nginx silently zero mappings, then a traceback | writing documentation, then reading the code | yes |
+
+**Zero of the four.** The suite was green through all of them, and would have been
+green in CI too. Not one was reachable by a test: two needed real data, one needed
+a second run of a live site, one needed somebody to read the code while writing
+prose about it.
+
+So "the tests are the safety net" is false in a way that matters. A reader who
+takes D39 at face value concludes that a passing suite means the tool works. This
+week says otherwise, four times.
+
+**What the tests are actually for.** Preventing the *known* failures from coming
+back. That is worth having and is not what D39 implied. The failures that cost
+this week were all new, and a green suite says nothing about a failure nobody has
+written a test for.
+
+**What this does not change.** CI would have delivered_zero_ of the four. Paying
+for infrastructure to run tests that would not have caught the week's defects is
+the same trade D39 rejected, for the same reason. The decision stands on a better
+argument than the one it was made with.
+
+**One concrete consequence, and it is the useful part of this review.** D43 closed
+with an unbuilt check: fail when `rules_run` changes and the version does not.
+Under no-CI that check has exactly one place to live - the test suite, because the
+suite is the only thing that runs. Leaving it unbuilt while concluding "tests are
+the only mechanism" would be incoherent. It is now built.
+
+**The trigger is incomplete.** D39 named "a third workspace binding". That is a
+proxy for "more places forgetting to run the suite". The sharper trigger is: a
+defect that a test could have caught and did not, because nobody ran it. That has
+not happened yet - every defect this week was outside test reach - and it is the
+signal that the manual arrangement has actually failed.

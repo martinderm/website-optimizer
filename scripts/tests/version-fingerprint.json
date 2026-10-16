@@ -1,0 +1,62 @@
+{
+  "_comment": "Rule set per capability, for the version it was stamped for. Guarded by test_version_follows_rules.py. Per D43 the version moves when rules_run moves: raise TOOL_VERSION in scripts/wo/report.py, then re-run the suite to refresh this file. Do not edit by hand.",
+  "version": "0.4.1",
+  "rules": {
+    "images": [
+      "icon.file_missing",
+      "icon.none_declared",
+      "image.dimensions_missing",
+      "image.format_legacy",
+      "image.loading_partial",
+      "image.loading_unset",
+      "image.og_relative",
+      "image.sizes_missing",
+      "image.src_missing",
+      "image.srcset_missing"
+    ],
+    "on-page": [
+      "canonical.host_differs",
+      "canonical.mismatch",
+      "canonical.missing",
+      "description.long",
+      "description.missing",
+      "description.short",
+      "h1.missing",
+      "h1.multiple",
+      "img.alt.missing",
+      "lang.missing",
+      "main.missing",
+      "og.description.missing",
+      "og.image.missing",
+      "og.title.missing",
+      "robots.noindex",
+      "skiplink.missing",
+      "title.missing",
+      "twitter.card.missing"
+    ],
+    "redirects": [
+      "redirect.failed",
+      "redirect.location_mismatch",
+      "redirect.status_unexpected",
+      "redirect.target_unreachable",
+      "redirect.unreachable"
+    ],
+    "schema": [
+      "schema.block_empty",
+      "schema.block_invalid_json",
+      "schema.block_no_types",
+      "schema.context_missing",
+      "schema.identifier_conflicting",
+      "schema.identity_missing",
+      "schema.none",
+      "schema.required_field_missing"
+    ],
+    "compare": [
+      "check-change",
+      "improvement",
+      "regression",
+      "site-change",
+      "unattributed"
+    ]
+  }
+}

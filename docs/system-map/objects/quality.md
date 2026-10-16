@@ -10,7 +10,7 @@ revision: a2dda236b34e6222be84c6068d84203f340219a8
 
 # Qualität
 
-155 Tests, Standardbibliothek `unittest`, kein Runner nötig.
+169 Tests, Standardbibliothek `unittest`, kein Runner nötig.
 
 ## Why this shape
 Der Authoring Guide verbietet pip-Abhängigkeiten; ein Test-Runner wie pytest wäre
@@ -69,6 +69,20 @@ Strings steuern. Geprüft werden die Entscheidungen, nicht der Browser.
 - [scripts/tests/test_crawl.py](../../../scripts/tests/test_crawl.py)
 - [scripts/tests/fixtures/site/public/index.html](../../../scripts/tests/fixtures/site/public/index.html)
 
+`test_version_follows_rules.py` schliesst die Luecke, die D43 offen liess: die
+Version muss sich bewegen, wenn sich `rules_run` bewegt. Der Fingerabdruck liegt
+in `version-fingerprint.json` und enthaelt die Regelmenge je Capability -
+inklusive `compare`, dessen Regelmenge `KINDS` ist und kein `CHECKS`. Ohne diesen
+Eintrag waere genau der Fall von D44 (`unattributed` kam dazu) unbemerkt
+geblieben.
+
+Geprueft wurde das Ausbleiben, nicht das Vorhandensein: eine erfundene Regel in
+`images.CHECKS` ohne Versionssprung laesst den Test fehlschlagen und nennt beide
+Regelmengen.
+
+Grund fuer diese Datei ist die D49-Pruefung der CI-Entscheidung. Unter "kein CI"
+hat so eine Pruefung genau einen Ort: die Testsuite, weil die Suite das Einzige
+ist, was laeuft.
 ## Connected to
 Gehört zu [On-Page](on-page.md), [Page](page.md), [Site-Config](site-config.md), [Receipt](receipt.md), [Envelope](envelope.md) — praktisch zu jeder Karte.
 

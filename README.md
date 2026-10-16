@@ -28,7 +28,7 @@ instead of reading build output. For a static site both paths must agree; for a
 dynamic one only the live path has anything to read.
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
-**[decision-log.md](decision-log.md)** carries decisions D1–D48 with their
+**[decision-log.md](decision-log.md)** carries decisions D1–D49 with their
 support level and evidence anchors.
 
 ## Repository layout
