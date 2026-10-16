@@ -27,6 +27,7 @@ only; the value itself is authored prose and a report has no use for it.
 | `image.sizes_missing` | warning | width-descriptor `srcset` without `sizes` — the browser picks the wrong candidate |
 | `image.format_legacy` | warning | no AVIF or WebP candidate anywhere in the set |
 | `image.loading_unset` | warning | no image on the page declares a loading strategy (once per page) |
+| `image.loading_partial` | warning | some images declare a strategy, some do not (once per page) |
 | `image.og_relative` | warning | `og:image` is not an absolute URL — scrapers do not resolve it |
 | `icon.none_declared` | warning | no favicon or app icon declared |
 | `icon.file_missing` | critical | an icon is declared but the file is not in the build output |
@@ -57,19 +58,20 @@ and no single-page view can see it.
 
 - `loading` strategy cannot be judged statically: whether an image is above the
   fold needs a layout, so only a wholly undeclared strategy is reported.
-- **A partially declared strategy is not reported at all.** The rule fires when
-  *no* image on the page declares one, so a page whose hero is `loading=eager`
-  and whose second image declares nothing produces zero findings — even though
-  that second image will be fetched eagerly whether or not it is in the
-  viewport. On the reference site this is 121 pages with a mixed declaration
-  and no finding.
+- **A partially declared strategy raises a question, not a verdict.** The fold
+  cannot be measured statically: whether an image sits above it needs a layout.
+  So `image.loading_partial` says the question is open, how many images it
+  concerns, and what would close it — it does not say those images are wrong.
 
-  This is a deliberate scope, not an oversight, and it is recorded here because
-  the number looks smaller than the problem. Tightening it needs a fold
-  heuristic, which is the thing `performance.md` already owns; until that
-  exists, widening this rule would report images it cannot justify. Anyone
-  reading a `loading_unset` count of zero should read it as *"no page declares
-  no strategy"*, not *"every image declares one"*.
+  Before this rule existed, 121 pages on the reference site and 26 of 29 on a
+  real WordPress site reported nothing at all despite carrying images with no
+  strategy — among them one page with 42 OpenStreetMap tiles, every one of which
+  the browser fetches immediately. Silence read as clean.
+
+  What would close the question is a live run that measures each image's
+  position against the viewport. That path is not taken automatically: a crawl
+  per page is the most expensive thing this tool does. Until it is taken, read
+  `loading_partial` as a prompt to investigate, not as a defect list.
 - Image *weight* is not measured. That needs real network or file inspection and
   belongs to `performance.md`.
 - `<picture>` elements are not walked; their `<source>` children are invisible

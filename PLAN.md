@@ -505,9 +505,12 @@ that were not on any list:
 - Fixed: `<img>` without a `src` was counted three times over, including as a
   critical missing dimension. 140 of 469 critical findings on the reference site
   described elements that download nothing. Now `image.src_missing`. D31.
-- Documented, not fixed: `image.loading_unset` misses every page with a mixed
-  `loading` declaration - 121 pages on the reference site. Tightening it needs a
-  fold heuristic, which `performance.md` owns. D30.
+- ~~`image.loading_unset` misses every page with a mixed `loading`
+  declaration~~ partially closed 2026-10-16. `image.loading_partial` now raises
+  the question per page instead of leaving it unasked; the fold measurement that
+  would answer it exists but is not run automatically. D40. The reference site's
+  run went from 1209 to 1330 findings, the 121 added being exactly the pages
+  that had been silent.
 
 ### Round 8 — open per platform
 
@@ -519,10 +522,13 @@ it could not until the sitemap fix existed.
   Until that is answered it is switched off per site, with the reason written
   into the site config rather than left as a silence. Not a WordPress-only
   problem: any platform whose redirects are not a file is in the same state.
-- Consent handling is absent by design (D34). On WordPress a consent plugin is
-  the normal case, so the refusal will be met far more often there than on a
-  static site. Documented in the workspace `AGENTS.md`; a way to accept consent
-  once and proceed is not built.
+- Consent handling is answered, not deferred. `[crawl] profile` lets a site name
+  a browser profile that has already accepted its cookie banner; a relative path
+  resolves against the workspace, so the profile can live per agent workspace or
+  per machine at the user's choice. Off unless configured, because a persistent
+  profile directory holds session cookies and must not be created unasked. D41.
+  Never yet exercised against a real consent wall - the guard is tested, the
+  escape hatch is not.
 
 **The lesson worth keeping:** all four verification claims from round 2 passed,
 and all three defects above were outside anything they covered. Parity checks

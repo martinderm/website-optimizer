@@ -208,12 +208,14 @@ class BrowserSession:
     def __init__(self, name: str, timeout: int = DEFAULT_TIMEOUT,
                  settle_ms: int = DEFAULT_SETTLE_MS,
                  headed: bool = False,
+                 profile: Path | None = None,
                  runner: Callable[..., subprocess.CompletedProcess] | None = None,
                  command: list[str] | None = None):
         self.name = name
         self.timeout = timeout
         self.settle_ms = settle_ms
         self.headed = headed
+        self.profile = Path(profile) if profile else None
         self._runner = runner or _run_cli
         self._command = command
         self._open = False
@@ -228,6 +230,18 @@ class BrowserSession:
         args = ["open", "--browser=msedge"]
         if self.headed:
             args.append("--headed")
+        if self.profile:
+            # The profile carries cookies and storage between runs, which is the
+            # only way past a consent wall: accept once in a headed session, then
+            # every later crawl arrives already past it.
+            #
+            # It is a secret directory. `playwright-cli`'s own documentation says
+            # so, and the reason is not abstract - a profile that has been used to
+            # log in carries the session cookie. It therefore never lives in the
+            # workspace, is never written by this tool, and is named in the site
+            # config only by path.
+            self.profile.mkdir(parents=True, exist_ok=True)
+            args.append(f"--profile={self.profile}")
         result = self._call(args)
         if result.returncode != 0:
             raise CrawlError(
@@ -353,10 +367,20 @@ def crawl(urls: list[str], config, run: str | None = None,
     if command is None:
         raise CrawlError(detail)
 
+    profile_path = None
+    configured_profile = config.crawl.get("profile")
+    if configured_profile:
+        candidate = Path(configured_profile)
+        # A relative profile path is resolved against the workspace so that
+        # "one profile per agent workspace" and "one profile per machine" are
+        # both expressible without either becoming the tool's preference.
+        profile_path = candidate if candidate.is_absolute() else Path(config.workspace_root) / candidate
+
     with BrowserSession(
         session_name,
         timeout=int(config.crawl.get("timeout_seconds", DEFAULT_TIMEOUT)),
         settle_ms=int(config.crawl.get("settle_ms", DEFAULT_SETTLE_MS)),
+        profile=profile_path,
         command=command,
     ) as browser:
         for index, url in enumerate(urls, start=1):
@@ -633,6 +657,9 @@ def crawl_settings(data: dict) -> dict[str, Any]:
     start = section.get("start_urls", []) or []
     if not isinstance(start, list) or not all(isinstance(u, str) for u in start):
         raise ConfigError("[crawl] start_urls must be a list of URL strings.")
+    profile = section.get("profile")
+    if profile is not None and not isinstance(profile, str):
+        raise ConfigError("[crawl] profile must be a directory path.")
     return {
         "start_urls": start,
         "sitemap": section.get("sitemap"),
@@ -641,4 +668,8 @@ def crawl_settings(data: dict) -> dict[str, Any]:
         "timeout_seconds": timeout,
         "settle_ms": settle,
         "cli_path": section.get("cli_path"),
+        # Off unless a site needs it. See the profile branch in BrowserSession:
+        # it exists because consent walls block crawls, not because in-memory
+        # sessions are inconvenient.
+        "profile": profile,
     }

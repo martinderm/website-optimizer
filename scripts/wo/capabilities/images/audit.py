@@ -135,15 +135,41 @@ def image_format(page: Page) -> list[dict]:
 
 
 def image_lazy_loading(page: Page) -> list[dict]:
-    """Missing loading attribute entirely is worth one note per page, not per image."""
+    """Missing loading attribute entirely is worth one note per page, not per image.
+
+    Two findings, and the difference between them is the point.
+
+    `loading_unset` fires when *no* image on the page declares a strategy. That is
+    a defect on every one of them.
+
+    `loading_partial` fires when some do and some do not. Those images are not
+    necessarily wrong: the first one may be the hero, and a hero must be eager.
+    A static audit cannot tell, so this is a recommendation rather than a verdict
+    - it says the question is open and what would close it, instead of leaving
+    the question unasked. On the reference sites this is the commoner case by a
+    wide margin, and silently skipping it is how 121 pages once looked clean
+    while 123 images had no strategy at all.
+    """
     if not page.images:
         return []
     without = sum(1 for i in page.images if not i["loading"])
+
     if without == len(page.images):
         return [_finding(
             "image.loading_unset", WARNING,
             f"None of {len(page.images)} <img> declares a loading strategy",
             None, 'loading="lazy" or "eager"', page.source, "body > img")]
+
+    if without:
+        return [_finding(
+            "image.loading_partial", WARNING,
+            f"{without} of {len(page.images)} <img> declare no loading strategy while "
+            f"{len(page.images) - without} do. The ones with a strategy are probably "
+            f"above the fold, which would make these lazy-load candidates - but a "
+            f"static audit cannot measure the fold. Close this with a live run that "
+            f"measures it, not by guessing here.",
+            without, "a strategy on every image",
+            page.source, "body > img")]
     return []
 
 
@@ -216,6 +242,7 @@ CHECKS: tuple[str, ...] = (
     "image.sizes_missing",
     "image.format_legacy",
     "image.loading_unset",
+    "image.loading_partial",
     "image.og_relative",
     "icon.none_declared",
     "icon.file_missing",

@@ -257,6 +257,62 @@ class _Body:
         return False
 
 
+class ProfileTest(unittest.TestCase):
+    """A profile is how a consent wall gets past - and it is a secret."""
+
+    def test_no_profile_means_no_profile_flag(self):
+        log: list = []
+        with tempfile.TemporaryDirectory() as tmp:
+            original = crawl._run_cli
+            crawl._run_cli = _fake_runner({"https://example.com/a/": "<html></html>"}, log)
+            try:
+                crawl.crawl(["https://example.com/a/"], _config(tmp, settle_ms=0), run="r")
+            finally:
+                crawl._run_cli = original
+        open_args = [a for _s, a in log if a and a[0] == "open"][0]
+        self.assertFalse(any(str(x).startswith("--profile") for x in open_args),
+                         "in-memory sessions are the default; a profile is opt-in")
+
+    def test_configured_profile_is_created_and_passed(self):
+        log: list = []
+        pages = {"https://example.com/a/": "<html lang=de><title>t</title></html>"}
+        with tempfile.TemporaryDirectory() as tmp:
+            cfg = _config(tmp, settle_ms=0, profile=".browser/wo-profile")
+            target = Path(tmp) / ".browser" / "wo-profile"
+            original = crawl._run_cli
+            crawl._run_cli = _fake_runner(pages, log)
+            try:
+                crawl.crawl(["https://example.com/a/"], cfg, run="r")
+            finally:
+                crawl._run_cli = original
+            open_args = [a for _s, a in log if a and a[0] == "open"][0]
+            flag = [x for x in open_args if str(x).startswith("--profile")][0]
+            # Relative resolves against the workspace, so "per workspace" and
+            # "per machine" are both expressible without either being preferred.
+            self.assertEqual(Path(str(flag).split("=", 1)[1]).resolve(), target.resolve())
+            self.assertTrue(target.is_dir())
+
+    def test_absolute_profile_is_left_alone(self):
+        log: list = []
+        pages = {"https://example.com/a/": "<html lang=de><title>t</title></html>"}
+        with tempfile.TemporaryDirectory() as tmp:
+            elsewhere = Path(tmp) / "machine-profiles" / "theresienhof"
+            cfg = _config(tmp, settle_ms=0, profile=str(elsewhere))
+            original = crawl._run_cli
+            crawl._run_cli = _fake_runner(pages, log)
+            try:
+                crawl.crawl(["https://example.com/a/"], cfg, run="r")
+            finally:
+                crawl._run_cli = original
+            open_args = [a for _s, a in log if a and a[0] == "open"][0]
+            flag = [x for x in open_args if str(x).startswith("--profile")][0]
+            self.assertEqual(Path(str(flag).split("=", 1)[1]).resolve(), elsewhere.resolve())
+
+    def test_profile_must_be_a_string(self):
+        with self.assertRaises(ConfigError):
+            crawl_settings({"crawl": {"profile": 42}})
+
+
 class CrawlSettingsTest(unittest.TestCase):
     def test_defaults(self):
         settings = crawl_settings({})

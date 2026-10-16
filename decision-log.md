@@ -882,3 +882,68 @@ the number of places it has to be remembered.
 
 **What would change the decision:** a third workspace binding, or a rule change
 that is hard to review by eye. Nothing has hit that yet.
+
+---
+
+## D40 - A question the audit cannot answer is raised, not dropped
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** `image.loading_partial` is a warning that fires once per page when
+some images declare a `loading` strategy and some do not. It states how many, and
+says what would close the question. It does not assert that those images are
+wrong. The measurement that would settle it - each image's position against the
+viewport - exists but is not run automatically.
+
+**Reason:** silence read as clean. On the reference site 121 pages, and on a real
+WordPress site 26 of 29, carried images with no strategy and reported nothing -
+including one page with 42 OpenStreetMap tiles, every one of which the browser
+fetches immediately regardless of whether it is in the viewport.
+
+The earlier reasoning - that a static audit cannot tell an above-the-fold image
+from a lazy-load candidate, so widening the rule would report images it cannot
+justify - was right about the *verdict* and wrong about the silence. A finding
+that says "this is open, and here is what would close it" is not a verdict, and it
+does not need to be justified as one.
+
+**Why the measurement is not automatic:** a crawl per page is the most expensive
+thing this tool does, and it would be spent answering a question that on most
+sites is cheap to ignore. The rule is the prompt; taking the measurement is a
+decision.
+
+**Measured effect, same site, same code path otherwise:** 1209 findings became
+1330. The 121 added are exactly the pages that were silent. Critical count
+unchanged at 329.
+
+---
+
+## D41 - A browser profile is per site, configured, and off by default
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** inherited
+
+**Decision:** `[crawl] profile` names a directory. When set, the crawl opens the
+browser with `--profile=<dir>`; when absent, the in-memory default stands. A
+relative path resolves against the workspace root, so "one profile per agent
+workspace" and "one profile per machine" are both expressible and neither is
+imposed.
+
+**Reason:** it is the only way past a consent wall that a crawl can meet.
+Accepting once in a headed session and reusing that profile is exactly the
+`playwright-cli` feature for it. Consent plugins are the normal case on
+WordPress, so the wall guard of D34 will refuse frequently there, and without
+this the only available answer is not to crawl.
+
+**Why off by default:** nothing about it is needed until it is, and a tool that
+creates browser profiles nobody asked for is a tool that leaves directories
+containing session cookies behind.
+
+**The path is a secret and the tool treats it as one.** `playwright-cli`'s own
+documentation says a persistent profile directory is secret, because a profile
+used to log in carries the session cookie. The tool creates the directory and
+never reads, writes, or reports its contents; the config names it by path only.
+Any workspace using this must keep the path out of git - the profile directory
+itself is the sensitive artifact, not the line pointing at it.

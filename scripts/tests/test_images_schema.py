@@ -54,6 +54,40 @@ class ImagesTest(unittest.TestCase):
         self.assertIn("empty src", findings[0]["message"])
         self.assertIn("requests the page URL", findings[0]["message"])
 
+    def test_mixed_loading_raises_the_question_instead_of_staying_silent(self):
+        """The gap this closes: 121 pages once looked clean with no strategy.
+
+        A hero image is probably eager on purpose, so a static audit cannot say
+        the other images are wrong. What it can do is stop pretending the
+        question does not exist.
+        """
+        page = _page(
+            '<html lang="de">'
+            '<img src="/hero.jpg" loading="eager">'
+            '<img src="/tile-a.png">'
+            '<img src="/tile-b.png">'
+            "</html>"
+        )
+        findings = [f for f in images.audit_page(page)
+                    if f["rule_id"].startswith("image.loading")]
+        self.assertEqual([f["rule_id"] for f in findings], ["image.loading_partial"])
+        self.assertEqual(findings[0]["observed"], 2)
+        self.assertIn("2 of 3", findings[0]["message"])
+        # It must not claim to know which are above the fold.
+        self.assertNotIn("above the fold:", findings[0]["message"])
+
+    def test_fully_undeclared_and_fully_declared_stay_as_they_were(self):
+        none = _page('<html lang="de"><img src="/a.jpg"><img src="/b.jpg"></html>')
+        ids = {f["rule_id"] for f in images.audit_page(none) if "loading" in f["rule_id"]}
+        self.assertEqual(ids, {"image.loading_unset"})
+
+        all_set = _page(
+            '<html lang="de"><img src="/a.jpg" loading="lazy">'
+            '<img src="/b.jpg" loading="eager"></html>'
+        )
+        ids = {f["rule_id"] for f in images.audit_page(all_set) if "loading" in f["rule_id"]}
+        self.assertEqual(ids, set())
+
     def test_missing_dimensions_is_critical(self):
         page = _page('<html lang="de"><img src="/a.jpg"></html>')
         findings = [f for f in images.audit_page(page) if f["rule_id"] == "image.dimensions_missing"]
@@ -115,12 +149,21 @@ class ImagesTest(unittest.TestCase):
             '<html lang="de"><meta property="og:image" content="/og.jpg">'
             '<img src="/a.jpg">'
             '<img class="lightbox" data-image alt="">'
+            '<img src="/hero.jpg" loading="eager">'
             '<img src="/b.jpg" width="8" height="6" srcset="/b.jpg 800w"></html>'
         )
         with_icons = _page('<html lang="de"><link rel="icon" href="/favicon.ico"></html>')
+        # A third state: not one image declares a strategy. `loading_unset` and
+        # `loading_partial` are mutually exclusive by construction, so two pages
+        # are needed to reach both - the same reason the icons need two.
+        undeclared = _page(
+            '<html lang="de"><link rel="icon" href="/favicon.ico">'
+            '<img src="/a.jpg"><img src="/b.jpg"></html>'
+        )
         with tempfile.TemporaryDirectory() as root:
             emitted = set(_ids(images.audit_page(no_icons, Path(root))))
             emitted |= set(_ids(images.audit_page(with_icons, Path(root))))
+            emitted |= set(_ids(images.audit_page(undeclared, Path(root))))
         self.assertEqual(emitted - set(images.CHECKS), set())
         self.assertEqual(set(images.CHECKS) - emitted, set())
 
