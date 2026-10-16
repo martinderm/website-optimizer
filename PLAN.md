@@ -369,7 +369,7 @@ before its consumers are updated.
 | `chores/add-llms-txt.md` | `llm-visibility.md` | stub | done |
 | `chores/mobile-optimierung-und-menue.md` | **stays** in `hugo` (D6) | no stub; only generalized parts mirrored | done |
 | `scripts/audit-site-seo.py` | `capabilities/on_page/` | ported, parity verified on 173 pages, removed | done |
-| `scripts/verify-redirects.py` | `capabilities/redirects/` | ported, parity verified on 53 live rules | **kept until everything is migrated** |
+| `scripts/verify-redirects.py` | `capabilities/redirects/` | ported, parity verified on 53 live rules | removed 2026-10-16 after the capability was re-verified standalone |
 
 Remains in hugo-wizard by design: `memory/references/websites/<domain>.md` (site
 decisions) and `memory/evidence/` (execution records). Those are the evidence
@@ -444,18 +444,18 @@ byte-identical twins of `README.md` and are generated, never hand-edited.
 **Catalog blast radius is `workspace_scoped`, not `read_only`.** The skill writes
 reports and baselines into the consuming workspace by design.
 
-### Round 4 — capabilities — **4 of 5 done**
+### Round 4 — capabilities — **done**
 
 | Capability | State | Verified by |
 |---|---|---|
-| `on-page` | done | parity vs. the original, 173 pages |
+| `on-page` | done | parity vs. the original, 173 pages; then against a real WordPress site |
 | `redirects` | done | parity vs. the original, 53 live rules |
-| `images` | done | 173 pages; every rule re-counted independently, one false-positive class found and removed |
+| `images` | done | 173 pages; every rule re-counted independently, one false-positive class found and removed; re-derived exactly from live crawl artifacts |
 | `schema` | done | 173 blocks, 4 types; found a real `#artist` `sameAs` inconsistency |
 | `compare` | done | regression, improvement, check-change, site-change |
-| live crawl | **not started** | — |
 
 Kept separate so a failing capability never blocked the map or the references.
+Live rendering is round 5, not a sixth capability.
 
 ### Round 5 — live page rendering — **done**
 
@@ -469,20 +469,33 @@ rendered in a browser, compared page by page per capability. All three identical
 The consent wall of D26(d) is now detected rather than merely documented — most
 identical pages raise instead of reporting.
 
+Then driven by a real WordPress requirement, which found two more:
+sitemaps are indexes and must be followed (D37), and a canonical on another host
+is a configuration hint rather than a page defect (D38).
+
 New decisions: D32 (a crawl reports its reach), D33 (one code path), D34 (the
 wall guard), D35 (UTF-8, not the terminal's encoding), D36 (no shell).
 
-### Round 6 — housekeeping
+### Round 6 — housekeeping — **partly done**
 
 - ~~Refresh `.agents/upstream.lock.json` and `AGENTS.md` in `hugo-wizard`~~ done.
 - ~~Rewrite the `skills-catalog.yaml` entry~~ done.
-- Delete `verify-redirects.py` once its remaining referrers are checked.
+- ~~Delete `verify-redirects.py` once its remaining referrers are checked~~ done
+  2026-10-16. The capability was re-verified standalone first — 53 live rules,
+  53 passed, 0 failed, the same figure the parity check produced — then the
+  script was removed. Seven referrers were rewritten; the three that remain are
+  the ones dating the migration, which are correct as they stand.
+
+  One capability of the original has no successor: `--test-route`, the inline
+  single-route check. For that case there is `curl -I`. Named in both the
+  workspace README and the runbook, because a migration that quietly drops a
+  feature reads as equivalence.
 - Decide on CI. Without it a parity check is a snapshot, not a guarantee.
 
 ### Round 7 — open findings from verification
 
-Verifying the image capability against the built output (round 6) produced two
-items that were not on any list:
+Verifying the image capability against the built output (round 6) produced items
+that were not on any list:
 
 - Fixed: `--config` silently dropped the local overlay, so the documented
   invocation could not see a configured site at all. D29.
@@ -490,8 +503,23 @@ items that were not on any list:
   critical missing dimension. 140 of 469 critical findings on the reference site
   described elements that download nothing. Now `image.src_missing`. D31.
 - Documented, not fixed: `image.loading_unset` misses every page with a mixed
-  `loading` declaration — 121 pages on the reference site. Tightening it needs a
+  `loading` declaration - 121 pages on the reference site. Tightening it needs a
   fold heuristic, which `performance.md` owns. D30.
+
+### Round 8 — open per platform
+
+Found by asking whether the skill could be bound into `wordpress-wizard`, which
+it could not until the sitemap fix existed.
+
+- `redirects` has no source on WordPress. It reads a rule file; WordPress on
+  nginx has no `.htaccess` and keeps its redirects in the database or a plugin.
+  Until that is answered it is switched off per site, with the reason written
+  into the site config rather than left as a silence. Not a WordPress-only
+  problem: any platform whose redirects are not a file is in the same state.
+- Consent handling is absent by design (D34). On WordPress a consent plugin is
+  the normal case, so the refusal will be met far more often there than on a
+  static site. Documented in the workspace `AGENTS.md`; a way to accept consent
+  once and proceed is not built.
 
 **The lesson worth keeping:** all four verification claims from round 2 passed,
 and all three defects above were outside anything they covered. Parity checks
