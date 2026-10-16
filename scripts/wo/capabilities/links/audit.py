@@ -33,9 +33,10 @@ from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlsplit
+from urllib.parse import urlsplit
 
 from ... import pages as pages_module
+from ... import urls
 from ...errors import CapabilityError
 from ...report import TOOL_NAME, TOOL_VERSION
 
@@ -62,32 +63,6 @@ def _finding(rule_id, severity, message, observed, expected, subject, location):
 
 # --- URL handling ----------------------------------------------------------
 
-def _key(path: str) -> str:
-    """The lookup key for a URL path.
-
-    A static server answers one file under several spellings: `/about`,
-    `/about/` and `/about/index.html` are the same page. They collapse to one key
-    so the graph has one node per page instead of three, and so a link written
-    either way resolves the same.
-    """
-    path = unquote(path.split("#", 1)[0].split("?", 1)[0])
-    if not path.startswith("/"):
-        path = "/" + path
-    return posixpath.normpath(path)
-
-
-def _bare_host(netloc: str) -> str:
-    """A host without userinfo, port or a leading `www.`.
-
-    The `www` strip is deliberate and mirrors D38: the commonest misconfiguration
-    is a site that canonicalises to `www` while its config names the apex. An
-    absolute link across those two spellings is a link to the same site, and
-    treating it as external would make the graph quietly miss it.
-    """
-    host = netloc.rsplit("@", 1)[-1].split(":")[0].strip().lower()
-    return host[4:] if host.startswith("www.") else host
-
-
 def target_of(href: str, page_source: str, host: str) -> str | None:
     """The site-relative path a link points at, or None if it is not one.
 
@@ -107,60 +82,18 @@ def target_of(href: str, page_source: str, host: str) -> str | None:
         return None
 
     if split.netloc:
-        if _bare_host(split.netloc) != _bare_host(host):
+        if urls.bare_host(split.netloc) != urls.bare_host(host):
             return None
-        return _key(split.path or "/")
+        return urls.key(split.path or "/")
 
     if not split.path:
         return None  # a bare `?query`, or a fragment that survives the strip
     if split.path.startswith("/"):
-        return _key(split.path)
+        return urls.key(split.path)
 
     # A relative link resolves against the directory of the page that holds it.
     base = posixpath.dirname("/" + page_source)
-    return _key(posixpath.join(base, split.path))
-
-
-def build_served(root: Path) -> set[str]:
-    """Every URL path the build answers, under every spelling a static server
-    accepts.
-
-    Files are included, not only pages: a link to a PDF is a real link and its
-    target has to exist too. Built from the directory rather than from the
-    audited page set, so a target excluded from the audit by `ignore_path` still
-    counts as existing — it is un-audited, not absent.
-    """
-    served: set[str] = set()
-    for path in root.rglob("*"):
-        if not path.is_file():
-            continue
-        rel = path.relative_to(root).as_posix()
-        served.add(_key("/" + rel))
-        if rel.endswith("/index.html"):
-            served.add(_key("/" + rel[: -len("index.html")]))
-        elif rel == "index.html":
-            served.add("/")
-        elif rel.endswith(".html"):
-            served.add(_key("/" + rel[: -len(".html")]))
-    return served
-
-
-def _page_aliases(source: str) -> set[str]:
-    """The keys that name one built page, so a link can be tied to it.
-
-    These are the same spellings `build_served` accepts, and they have to stay
-    that way: one function decides whether a link resolves, this one decides
-    which page it resolves to. An alias the first accepts and the second misses
-    is a link that exists and leads nowhere in the graph.
-    """
-    if source == "index.html":
-        return {"/", _key("/index.html")}
-    if source.endswith("/index.html"):
-        return {_key("/" + source), _key("/" + source[: -len("index.html")])}
-    aliases = {_key("/" + source)}
-    if source.endswith(".html"):
-        aliases.add(_key("/" + source[: -len(".html")]))
-    return aliases
+    return urls.key(posixpath.join(base, split.path))
 
 
 def _page_alias_map(page_list) -> dict[str, str]:
@@ -173,7 +106,7 @@ def _page_alias_map(page_list) -> dict[str, str]:
     """
     aliases: dict[str, str] = {}
     for page in page_list:
-        for alias in _page_aliases(page.source):
+        for alias in urls.page_urls(page.source):
             aliases.setdefault(alias, page.source)
     return aliases
 
@@ -288,7 +221,7 @@ def run(config, live: bool = False, run: str | None = None, **_ignored) -> dict[
 
     page_set = pages_module.resolve(config, live=False)
     root = pages_module.find_static_dir(config.static_dir)
-    result = audit_pages(page_set.pages, build_served(root), config.domain)
+    result = audit_pages(page_set.pages, urls.served(root), config.domain)
 
     findings = result["findings"]
     critical = sum(1 for f in findings if f["severity"] == CRITICAL)

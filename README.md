@@ -22,16 +22,19 @@ reference set is complete, and `docs/system-map/` maps the tool contracts.
 | `wo.py images` | image delivery, dimensions, formats, icons |
 | `wo.py schema` | JSON-LD structure and completeness |
 | `wo.py links` | the internal link graph: broken targets, orphans, depth |
+| `wo.py crawler-files` | robots.txt, the sitemap and llms.txt |
 | `wo.py compare` | attribute what changed between two runs |
 
-`on-page`, `images` and `schema` take `--live`, which renders pages in a browser
+`on-page`, `images`, `schema` take `--live`, which renders pages in a browser
 instead of reading build output. For a static site both paths must agree; for a
 dynamic one only the live path has anything to read. `links` is build-only and
 raises on `--live`: a crawl sees part of a site, and a partial graph reports the
-crawl's reach as if it were the site's architecture.
+crawl's reach as if it were the site's architecture. `crawler-files` takes
+`--live` too, where it fetches four documents instead of rendering anything — the
+two rules that need a build leave `rules_run`.
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
-**[decision-log.md](decision-log.md)** carries decisions D1–D54 with their
+**[decision-log.md](decision-log.md)** carries decisions D1–D57 with their
 support level and evidence anchors.
 
 ## Repository layout
@@ -56,6 +59,7 @@ against the tools they replaced:
 | `schema` finds real defects | it found a `sameAs` inconsistency across 171 vs 2 pages |
 | `images` counts correctly | every rule re-counted independently against the built output |
 | `links` finds real defects | 3 broken targets and 7 orphans on the reference site, every one checked by hand in the markup |
+| `crawler-files` agrees with `links` | the two pages missing from the sitemap are the two pages `links` called unreachable |
 | `--live` agrees with the static build | 25 real pages, all three capabilities, no difference either way |
 
 The live path was checked the only way that means anything: the same pages read
@@ -134,14 +138,14 @@ and no CI is configured (D39). Those are decisions with reasons, not gaps waitin
 to be filled, so they are not issues. The decision log says why.
 
 The issues that do exist share a shape: a reference file describes something the
-tool cannot measure. That was the whole of `internal-linking.md` until the link
+tool cannot measure. `internal-linking.md` was the whole of it until the link
 graph landed — 102 lines about orphan pages, anchor text and depth with no rule
-behind any of it — and closing it left five more of the same kind: nothing checks
-`robots.txt`, a sitemap or `llms.txt`; `hreflang` appears nowhere; pagination and
-faceted navigation are unaddressed; `video.md` describes poster, preload and
-captions that no rule reads. The tool is honest about what it claims and does; the
-reference set claims more. Reading a reference file as a description of what the
-audit checks is the mistake that list exists to prevent.
+behind any of it — and `indexing.md`'s and `llm-visibility.md`'s files were the
+next, closed by `crawler-files`. What remains is `hreflang`, pagination and
+faceted navigation, and `video.md`'s poster, preload and captions. The tool is
+honest about what it claims and does; the reference set claims more. Reading a
+reference file as a description of what the audit checks is the mistake that list
+exists to prevent.
 
 ### Standard Template for `AGENTS.md`
 

@@ -1454,3 +1454,105 @@ nothing for a second reader to disagree with that a diff does not already show.
 **Consequence.** The reviewer is a fresh context when the environment offers one,
 and this is stated as a limit rather than a promise: on a change made without one
 available, the review is the author's own, and the commit says so.
+
+---
+
+## D55 - `crawler-files` reads three documents, from a build or from the site
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** one capability covers `robots.txt`, the XML sitemap and `llms.txt`.
+It runs against build output or, with `--live`, against the live site. Unlike
+`links` it does not refuse a crawl; the two rules that need a build simply leave
+`rules_run`.
+
+**Why one capability and not three.** They are the same kind of thing — a site
+stating something about itself to machines — and a third of each would be a third
+of a resolver, a third of a schema and a third of a README. The alternative
+considered was folding them into `on-page` and `links`; that would split one
+question across two capabilities whose definitions exclude it.
+
+**Why the name.** `indexing` was rejected although the reference is called that:
+`indexing.md` also covers Search Console, the URL-prefix rule and Bing, and a
+capability named after a topic it can only partly check is D11's overpromise with
+a different word. `crawler-files` says exactly what is read.
+
+**Why it does not refuse a live run.** `links` refuses because a partial graph is
+a *wrong* answer — every page beyond the crawl limit would read as unreachable.
+Here the live path is not partial: four documents are fetched completely, and a
+`Disallow: /` is worth finding on a site with no build output, which is exactly
+the WordPress case. What a live run cannot do is compare against a build, so two
+rules drop out and `rules_run` says which.
+
+**Found on the first run, and it corroborates another capability.** On the
+reference site: 3 warnings — no `llms.txt`, and two pages missing from the
+sitemap. Those two are `news/test-post/` and `projects/project-1/`, the same two
+pages `links` reported as unreachable. Two capabilities, one story: nothing links
+to them and nothing lists them. Against a live WordPress site the same capability
+returns 0 findings with `checked_pages: 0`.
+
+---
+
+## D56 - No coverage is claimed from a sitemap that could not be read
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** when the sitemap is missing, unreadable or empty, the two coverage
+rules are skipped entirely. `sitemap.unreadable` and `sitemap.empty` report the
+sitemap itself; nothing is said about the pages.
+
+**Reason:** the alternative is the loudest wrong answer this capability could
+produce. A sitemap that fails to parse yields no URLs, and a naive coverage rule
+would then report every page on the site as absent from it — a hundred findings,
+each individually plausible, all of them false, and the true finding buried
+underneath. The interaction was written as a test before the rule was written,
+which is the only reason it is not a comment.
+
+**The same shape as D30 and D32.** A count that describes the check rather than
+the site has to say so. `checked_pages: 0` in the summary means *no coverage was
+claimed*, not *no pages were compared* — and it is 0 in every live run for the
+same reason.
+
+**Separating empty from unreadable.** An empty sitemap and one a soft 404 answered
+with an HTML page are different defects: the first says the generator emitted
+nothing, the second says the host serves its own page at that path. One rule each,
+because collapsing them would lose the one piece of information that says where to
+look.
+
+---
+
+## D57 - Shared syntax gets one home the moment a second caller appears
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** two pieces of logic moved out of the capabilities that first needed
+them: the URL spellings (`wo/urls.py`) and the sitemap syntax (`wo/sitemaps.py`).
+
+**Reason, and it was not tidiness.** `crawler-files` needed both, and the copy
+would have been the third place to know how a URL spells a file. The second place
+had already gone wrong that day: inside `links`, `build_served` accepted
+`/index.html` as the home page and `_page_aliases` did not, which is exactly the
+divergence a second copy makes permanent.
+
+`wo/sitemaps.py` holds what a sitemap *is* — the `<loc>` shape, how an index is
+recognised, the filenames the convention uses. It deliberately does not hold the
+loop. The crawl wants "which URLs should I render", capped by `max_pages`, with a
+fallback chain and a loud failure; `crawler-files` wants "what does this sitemap
+list, all of it, and could it be read at all", where a cap turns every page beyond
+it into a false finding. Sharing the loop would mean one of them carrying the
+other's contract.
+
+**What was not moved.** `links` keeps its own graph, `compare` its own
+classifications. Shared syntax is shared; shared conclusions would be the thing
+the capability boundary exists to prevent.
+
+**The guard.** `test_crawl.py`'s nine sitemap cases covered the extraction, so it
+was verified to still pass before and after — and `test_version_follows_rules`
+plus the map guard stayed green, none of which would have been true if a rule had
+moved.

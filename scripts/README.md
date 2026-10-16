@@ -19,6 +19,7 @@ scripts: two entry points drift apart, and running `wo.py` puts this directory o
 | `init-site` | write a `site.optimizer.toml` for a site |
 | `on-page` | audit on-page signals in a static output directory |
 | `links` | audit the internal link graph of built output |
+| `crawler-files` | audit robots.txt, the sitemap and llms.txt, from a build or the live site |
 | `redirects` | probe live redirect rules against the running site |
 | `runs` | list stored runs for the configured site |
 | `validate-report` | validate a report; the matching capability schema is autodetected |
@@ -50,6 +51,8 @@ wo/
   envelope.py             the standard --json envelope
   config.py               TOML loading and validation
   page.py                 field extraction from HTML
+  urls.py                 how a URL and a build file name each other
+  sitemaps.py             sitemap syntax: <loc>, index roots, known names
   report.py               run folders, atomic writes, data-zone receipts
   jsonschema.py           dependency-free validator for the schema subset used
   capabilities/
@@ -58,6 +61,7 @@ wo/
     images/              image delivery and icons
     schema/              JSON-LD structure
     links/               the internal link graph (build output only)
+    crawler_files/       robots.txt, sitemap, llms.txt
     compare/             difference attribution between runs
 schemas/
   report-base.schema.json     fields every report carries
@@ -66,6 +70,7 @@ schemas/
   images-report.schema.json     extends the base
   schema-report.schema.json     extends the base
   links-report.schema.json      extends the base
+  crawler-files-report.schema.json extends the base
   compare-report.schema.json   extends the base
 tests/                    stdlib unittest, including parity against the originals
 ```
@@ -75,9 +80,10 @@ hyphen is a fine command name and an invalid Python identifier.
 
 ## Network
 
-`redirects` performs live HTTP requests; `on-page`, `images`, `schema` and
-`links` do not. A capability that reaches the network is marked `crawl_mode: live`
-in its report, because a live result and a static one are not comparable.
+`redirects` performs live HTTP requests, and `crawler-files` does so with
+`--live`; `on-page`, `images`, `schema` and `links` do not. A capability that
+reaches the network is marked `crawl_mode: live` in its report, because a live
+result and a static one are not comparable.
 
 ## Where output goes
 

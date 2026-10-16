@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martinderm/website-optimizer/schemas/crawler-files-report.schema.json",
+  "title": "Crawler Files Audit Report",
+  "description": "robots.txt, the XML sitemap and llms.txt, read from build output or from the live site. The two coverage rules need a build and drop out of a live run's rules_run.",
+  "type": "object",
+  "allOf": [
+    {"$ref": "report-base.schema.json"},
+    {
+      "type": "object",
+      "required": ["source", "summary"],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"enum": ["static_dir", "live_site"]},
+            "path": {"type": ["string", "null"]}
+          }
+        },
+        "summary": {
+          "type": "object",
+          "required": [
+            "robots_found", "sitemap_found", "sitemap_urls", "llms_found",
+            "checked_pages", "total_critical_issues", "total_warnings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "robots_found": {"type": "boolean"},
+            "sitemap_found": {"type": "boolean"},
+            "sitemap_urls": {"type": "integer", "minimum": 0},
+            "llms_found": {"type": "boolean"},
+            "checked_pages": {"type": "integer", "minimum": 0},
+            "total_critical_issues": {"type": "integer", "minimum": 0},
+            "total_warnings": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    }
+  ]
+}

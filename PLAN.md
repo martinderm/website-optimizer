@@ -59,7 +59,7 @@ line says otherwise.
 website-optimizer/
 ├── SKILL.md                  router + source-of-truth table
 ├── PLAN.md                   this file
-├── decision-log.md           durable decisions D1–D54
+├── decision-log.md           durable decisions D1–D57
 ├── README.md
 ├── LICENSE                   MIT
 ├── references/               13 files
@@ -85,6 +85,8 @@ website-optimizer/
 │   │   ├── errors.py         CapabilityError base (Config/Mapping/Compare/Crawl)
 │   │   ├── jsonschema.py     stdlib validator, $ref resolution
 │   │   ├── page.py           field extraction from markup or a file
+│   │   ├── urls.py           how a URL and a build file name each other
+│   │   ├── sitemaps.py       sitemap syntax: <loc>, index roots, known names
 │   │   ├── report.py         run folders, atomic writes, data-zone receipts
 │   │   ├── crawl.py          playwright-cli binding, sitemap discovery, wall guard
 │   │   ├── pages.py          resolves either source into Page objects (D33)
@@ -94,6 +96,7 @@ website-optimizer/
 │   │       ├── images/       ← delivery, dimensions, icons, static or live
 │   │       ├── schema/       ← JSON-LD structure and completeness
 │   │       ├── links/        ← the internal link graph, build output only
+│   │       ├── crawler_files/ ← robots.txt, sitemap, llms.txt
 │   │       └── compare/      ← meta: attribute differences between two runs
 │   ├── schemas/
 │   │   ├── report-base.schema.json        shared by every report
@@ -102,14 +105,15 @@ website-optimizer/
 │   │   ├── images-report.schema.json
 │   │   ├── schema-report.schema.json
 │   │   ├── links-report.schema.json
+│   │   ├── crawler-files-report.schema.json
 │   │   └── compare-report.schema.json
-│   └── tests/                193 stdlib unittest cases
+│   └── tests/                217 stdlib unittest cases
 └── docs/system-map/          ICM Form 6
     ├── README.md  + byte-identical AGENTS.md + routing.md
     ├── CONTEXT.md
     ├── _meta/schema.md
     ├── _templates/{object,process}.md
-    ├── objects/              16 cards + CONTEXT.md + _index.md
+    ├── objects/              18 cards + CONTEXT.md + _index.md
     ├── processes/            audit-static, audit-live, compare-baseline
     └── effects/CONTEXT.md
 ```

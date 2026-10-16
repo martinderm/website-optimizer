@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from wo import jsonschema  # noqa: E402
+from wo import urls as url_module  # noqa: E402
 from wo.capabilities.links import audit as links  # noqa: E402
 from wo.config import SiteConfig  # noqa: E402
 from wo.errors import CapabilityError  # noqa: E402
@@ -44,7 +45,7 @@ def _write_site(root: Path, files: dict[str, str]) -> list:
 def _audit(files: dict[str, str], host: str = "example.com") -> dict:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        return links.audit_pages(_write_site(root, files), links.build_served(root), host)
+        return links.audit_pages(_write_site(root, files), url_module.served(root), host)
 
 
 def _ids(result):
@@ -204,11 +205,12 @@ class ContractTest(unittest.TestCase):
     def test_every_spelling_a_server_answers_names_its_page(self):
         """The spellings, written out as a table rather than derived from the code.
 
-        `build_served` decides whether a link resolves; `_page_aliases` decides
-        which page it resolves to. An alias the first accepts and the second
-        misses is a link that exists and leads nowhere in the graph. Found by
-        reading the two functions next to each other: `/index.html` was served
-        and named no page, while every other page had both of its spellings.
+        `urls.served` decides whether a URL resolves; `urls.page_urls` decides
+        which page it resolves to. A key the first accepts and the second misses
+        is a URL that exists and leads nowhere. Found by reading the two functions
+        next to each other: `/index.html` was served and named no page, while
+        every other page had both of its spellings — which is why they now live
+        in one module.
 
         A table, and not a derivation, because the defect was an omission. A test
         that computed the spellings the way the code does would have omitted the
@@ -222,7 +224,7 @@ class ContractTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             pages = _write_site(root, {rel: "<p>x</p>" for rel in spellings})
-            served = links.build_served(root)
+            served = url_module.served(root)
         aliases = links._page_alias_map(pages)
         for source, forms in spellings.items():
             for form in forms:

@@ -34,9 +34,10 @@ wirft deshalb, statt Null zu melden.
 
 ## Shape
 `scripts/wo/capabilities/links/audit.py` — `target_of` (löst ein `href` gegen die
-Seite auf, die es hält), `build_served` (jede URL, die das Verzeichnis
-beantwortet, in allen Schreibweisen, auch Dateien), `audit_pages`,
-`_distances` (BFS ab `/`), `CHECKS`.
+Seite auf, die es hält), `audit_pages`, `_page_alias_map`, `_distances` (BFS ab
+`/`), `CHECKS`. Die URL-Schreibweisen selbst liegen in
+[URLs](urls.md) — `served()` und `page_urls()` werden von `crawler-files`
+mitbenutzt, und genau deshalb stehen sie an einer Stelle.
 
 Regeln: `link.target_missing` (critical), `link.unreachable` und `link.depth`
 (je warning). `DEPTH_LIMIT` ist 4 — die Distanz, ab der

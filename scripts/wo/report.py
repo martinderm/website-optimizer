@@ -43,7 +43,9 @@ TOOL_NAME = "website-optimizer"
 # 0.5.1 is a patch, under the "anything else" half of the rule above: the redirects
 # User-Agent stopped restating a version by hand and derives this constant instead.
 # No rule moved, so no fingerprint moved.
-TOOL_VERSION = "0.5.1"
+# 0.6.0 added the seventh capability: `crawler-files`, eleven rules over robots.txt,
+# the sitemap and llms.txt.
+TOOL_VERSION = "0.6.0"
 
 # The artifact metadata contract. The authoritative schema lives in
 # agent-architecture; it is not copied here, because one definition of the

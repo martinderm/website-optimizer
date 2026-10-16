@@ -45,6 +45,11 @@ Sitemap: https://example.com/sitemap.xml
 `Sitemap:` line, so the sitemap must be referenced by a `layouts/robots.txt`
 template. See `static-sites.md`.
 
+**Measured by** `crawler-files`: `robots.missing`, `robots.blocks_site`,
+`robots.blocks_asset`, `robots.sitemap_missing`. What a machine cannot read is
+whether a blocked *path* was blocked on purpose — only the five usual delivery
+prefixes are recognised as mistakes.
+
 ## XML sitemap
 
 - One `sitemap.xml` listing every indexable URL with `lastmod`.
@@ -53,6 +58,16 @@ template. See `static-sites.md`.
 - Generated output counts as a sitemap as long as URLs and `lastmod` are
   accurate; generating it by hand does not improve it.
 - Submit it in Search Console and Bing Webmaster Tools.
+
+**Measured by** `crawler-files`: `sitemap.missing`, `sitemap.unreadable`,
+`sitemap.empty`, and — against a build — `sitemap.absent_page` and
+`sitemap.unsupported_url`. The middle two are worth telling apart: an empty
+sitemap means the generator emitted nothing, an unreadable one means a soft 404
+answered the request with the site's own HTML.
+
+**Coverage is claimed only from a sitemap that was read.** If the sitemap is
+missing or unreadable, no page is reported as absent from it — a failed parse
+would otherwise make the whole site look unlisted.
 
 ## noindex
 

@@ -29,6 +29,14 @@ REGISTRY = {
         "schema": "compare-report.schema.json",
         "meta": True,
     },
+    # `crawler-files` reads three documents about the site rather than its pages.
+    # It runs against build output or, with --live, against the live site — the
+    # robots.txt and llms.txt checks are worth making even where there is no
+    # build, so unlike `links` it does not refuse a crawl.
+    "crawler-files": {
+        "module": "wo.capabilities.crawler_files.audit",
+        "schema": "crawler-files-report.schema.json",
+    },
     "images": {
         "module": "wo.capabilities.images.audit",
         "schema": "images-report.schema.json",

@@ -49,6 +49,10 @@ a page full of navigation and script.
 - [History](https://example.com/geschichte/): Background, not usually needed
 ```
 
+**Measured by** `crawler-files`: `llms.missing` when there is none, `llms.empty`
+when there is one with no links in it. Presence and shape only — the file is
+Markdown and *reading* it is the job of whatever consumes it, not of an audit.
+
 The structure the specification describes:
 
 1. `#` H1 with the project or site name.
