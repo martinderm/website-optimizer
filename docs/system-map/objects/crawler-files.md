@@ -5,7 +5,7 @@ universe: live
 status: verified
 entity: scripts/wo/capabilities/crawler_files/audit.py
 verified_at: 2026-10-16
-revision: PENDING
+revision: d54632c434fd18da884ed4b491c5c50141cb01a0
 ---
 
 # Crawler-Files

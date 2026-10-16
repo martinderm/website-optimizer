@@ -5,7 +5,7 @@ universe: live
 status: verified
 entity: scripts/wo/urls.py
 verified_at: 2026-10-16
-revision: PENDING
+revision: d54632c434fd18da884ed4b491c5c50141cb01a0
 ---
 
 # URLs
