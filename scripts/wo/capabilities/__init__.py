@@ -33,6 +33,13 @@ REGISTRY = {
         "module": "wo.capabilities.images.audit",
         "schema": "images-report.schema.json",
     },
+    # `links` reads build output only. A crawl sees the pages inside its limit,
+    # so a graph drawn from one would report the crawl's reach as the site's
+    # architecture; the capability raises rather than doing that (see its README).
+    "links": {
+        "module": "wo.capabilities.links.audit",
+        "schema": "links-report.schema.json",
+    },
     "schema": {
         "module": "wo.capabilities.schema.audit",
         "schema": "schema-report.schema.json",

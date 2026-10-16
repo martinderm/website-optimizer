@@ -38,7 +38,9 @@ TOOL_NAME = "website-optimizer"
 # its job throughout — it is why those runs are still distinguishable at all —
 # but a version string that stays still while the thing it names changes is not
 # provenance, it is decoration. See decision D43.
-TOOL_VERSION = "0.4.1"
+# 0.5.0 added the sixth capability: `links`, with three rules, and the `Page.links`
+# field they read. `rules_run` differs on every site from 0.4.1 onwards.
+TOOL_VERSION = "0.5.0"
 
 # The artifact metadata contract. The authoritative schema lives in
 # agent-architecture; it is not copied here, because one definition of the

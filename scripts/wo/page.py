@@ -56,6 +56,12 @@ class Page:
     # Declared icons, so the images capability can check whether the referenced
     # files actually exist in the build output.
     icons: list[dict] = field(default_factory=list)
+    # Link targets, so the links capability can build the site's internal link
+    # graph. Only `href` is kept: the words inside an <a> are authored prose, and
+    # this module holds no prose (D13). The consequence is stated rather than
+    # hidden — anchor-text quality is a rule this tool cannot measure, and
+    # `references/internal-linking.md` says so next to the guidance.
+    links: list[dict] = field(default_factory=list)
 
     @property
     def description_length(self) -> int:
@@ -101,6 +107,12 @@ class _Extractor(HTMLParser):
             href = attr.get("href", "")
             if "#main-content" in href or "skip-link" in attr.get("class", ""):
                 self.page.has_skip_link = True
+            # Only the target is kept, not the element's text. An `<a>` with no
+            # `href` at all is not a link; one with an empty `href` is a link to
+            # the current page, and the capability resolves that rather than this
+            # module deciding it is not one.
+            if "href" in attr:
+                self.page.links.append({"href": href.strip()})
         elif tag == "img":
             self.page.images_total += 1
             alt_present = "alt" in attr
