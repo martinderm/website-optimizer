@@ -31,6 +31,7 @@ What makes that safe is attribution. Each difference is classified by cause:
 | `improvement` | a finding is gone and its rule still exists |
 | `check-change` | the `rule_id` exists in only one run's rule set |
 | `site-change` | same rules on both sides, findings differ |
+| `unattributed` | the two runs saw different numbers of pages — no cause can be assigned |
 
 `check-change` is the bucket that does the real work. Without it, adding a rule
 to the skill looks identical to breaking the site.
@@ -45,6 +46,30 @@ observation, and `check-change` cannot be detected. A test asserts that
 A baseline with no `rules_run` (written before the field existed) falls back to
 the severity rule rather than guessing `check-change` — guessing would swallow
 every real regression against an older run.
+
+## Scope
+
+`unattributed` exists because knowing the rule set is not enough. Two runs of the
+same rules over different numbers of pages cannot tell you anything about the
+site: more pages is expected to find more, fewer to find less. Concretely, a
+baseline that was a live crawl covering 25 of 173 pages compared against a static
+run covering all 173 reported `schema.identifier_conflicting` as a critical
+regression — and that rule has to meet the same `@id` on two pages before it can
+call anything conflicting.
+
+So the comparison reads `summary.audited_pages`, falling back to
+`crawl.fetched` for reports written before that field, and withholds attribution
+in **both** directions when the numbers differ. The reason string names both
+counts, because "we cannot say" without the numbers is just a different verdict.
+
+Two boundaries, both deliberate:
+
+- **Unknown scope does not withhold.** A report without the counter stays fully
+  comparable. Refusing against every older report would trade a narrow
+  misattribution for total silence.
+- **`unattributed` never becomes a finding.** It does not reach `findings`, does
+  not count towards `total_critical_issues`, and cannot fail `--strict`. The
+  contract for that field is "claims the tool stands behind", and this is not one.
 
 ## Legacy reports
 

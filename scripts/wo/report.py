@@ -38,7 +38,7 @@ TOOL_NAME = "website-optimizer"
 # its job throughout — it is why those runs are still distinguishable at all —
 # but a version string that stays still while the thing it names changes is not
 # provenance, it is decoration. See decision D43.
-TOOL_VERSION = "0.3.0"
+TOOL_VERSION = "0.4.0"
 
 # The artifact metadata contract. The authoritative schema lives in
 # agent-architecture; it is not copied here, because one definition of the

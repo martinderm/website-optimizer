@@ -47,6 +47,29 @@ unbrauchbar.
 | `improvement` | Befund verschwunden, Regel existiert weiterhin |
 | `check-change` | `rule_id` nur in einer der beiden Regelmengen |
 | `site-change` | gleiche Regeln, Befund hinzugekommen oder weg mit gesunkener Schwere |
+| `unattributed` | **keine Ursache zuweisbar** — die Läufe sahen unterschiedlich viele Seiten |
+
+`unattributed` ist kein fünfter *Grund*, sondern dessen Abwesenheit. Gefunden
+durch den ersten Vergleich gegen echte gespeicherte Läufe: eine Baseline, die
+ein Live-Crawl über 25 von 173 Seiten war, gegen einen statischen Lauf über alle
+173, meldete `schema.identifier_conflicting` als **kritische Regression**.
+Regelsätze identisch, Site unverändert — und diese Regel muss dieselbe `@id`
+zweimal begegnen, bevor sie überhaupt einen Widerspruch melden kann.
+
+Deshalb liest `classify` `summary.audited_pages` (Fallback `crawl.fetched` für
+ältere Reports). Bei ungleichem Umfang wird **in beide Richtungen** nicht
+zugewiesen: weniger Seiten finden erwartbar weniger, also ist ein verschwundener
+Befund kein Beweis für eine reparierte Site und ein neuer keiner für eine
+kaputte.
+
+Zwei Grenzen, beide Absicht:
+
+- **Unbekannter Umfang entzieht nichts.** Ein Report ohne Zähler bleibt voll
+  vergleichbar; Verweigerung gegen jeden älteren Lauf würde eine enge
+  Fehlzurechnung gegen totales Schweigen tauschen.
+- **`unattributed` wird nie zum Befund.** Es erreicht `findings` nicht, zählt
+  nicht in `total_critical_issues` und kann `--strict` nicht fehlschlagen lassen.
+  Der Vertrag dieses Feldes lautet „Aussagen, hinter denen das Werkzeug steht".
 
 Eine Baseline **ohne** `rules_run` fällt bewusst auf die Schweregrad-Regel
 zurück: „Prüfänderung" zu raten würde jede echte Regression gegen einen älteren

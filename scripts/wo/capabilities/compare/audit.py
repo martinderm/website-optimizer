@@ -22,6 +22,27 @@ skill would otherwise look identical to breaking the site.
 
 A provenance difference is reported as a qualifier on the comparison, never used
 as a filter.
+
+| Kind | Meaning |
+|---|---|
+| `unattributed` | **no cause could be assigned** — the two runs saw different numbers of pages |
+
+`unattributed` is not a fifth *cause*, it is the absence of one, and it is the
+only condition under which a difference is withheld from the other four buckets.
+The case that produced it: a baseline that was a live crawl covering 25 of 173
+pages, compared against a static run covering all 173, reported
+`schema.identifier_conflicting` as a regression. The rule set was identical and
+the site had not moved — the rule needs to meet the same `@id` on two pages, and
+a quarter of the site cannot produce that. A comparison that attributed an
+observation-depth difference to the site was making a claim it had no basis for.
+
+Equal scope is the normal case and changes nothing. Unequal scope makes every
+difference unattributable in *both* directions, because a larger sample is
+expected to find more and a smaller one expected to find less — so a missing
+finding is no more evidence of improvement than a new one is of regression.
+Neither does it refuse: the difference is reported, both page counts are named,
+and `unattributed` never becomes a finding, so `--strict` cannot fail on something
+the tool cannot explain.
 """
 
 from __future__ import annotations
@@ -43,6 +64,49 @@ REGRESSION = "regression"
 IMPROVEMENT = "improvement"
 CHECK_CHANGE = "check-change"
 SITE_CHANGE = "site-change"
+UNATTRIBUTED = "unattributed"
+
+KINDS = (REGRESSION, IMPROVEMENT, CHECK_CHANGE, SITE_CHANGE, UNATTRIBUTED)
+
+
+def scope_of(report: dict[str, Any]) -> int | None:
+    """How many pages a run actually looked at.
+
+    `audited_pages` is the capability-neutral counter; every capability carries it
+    for exactly this reason. The crawl block is the fallback for reports written
+    before that field existed, and `None` means "unknown" rather than zero — a
+    run of unknown scope must not be treated as a run that saw nothing, or every
+    comparison against an old report would refuse.
+    """
+    summary = report.get("summary") or {}
+    pages = summary.get("audited_pages")
+    if isinstance(pages, int) and not isinstance(pages, bool):
+        return pages
+    crawl = report.get("crawl") or {}
+    fetched = crawl.get("fetched")
+    if isinstance(fetched, int) and not isinstance(fetched, bool):
+        return fetched
+    return None
+
+
+def scope_differs(before: dict[str, Any], after: dict[str, Any]) -> tuple[bool, str]:
+    """Whether the two runs observed different amounts of the site.
+
+    Returns `(differs, reason)`. An unknown scope on either side does not count
+    as a difference: refusing to compare against every older report would trade a
+    narrow misattribution for total silence, which is the trade D25 exists to
+    prevent.
+    """
+    a, b = scope_of(before), scope_of(after)
+    if a is None or b is None:
+        return False, ""
+    if a == b:
+        return False, ""
+    return True, (
+        f"The baseline saw {a} page(s) and this run saw {b}. A difference between "
+        f"runs of different size cannot be attributed to the site: more pages is "
+        f"expected to find more, fewer to find less."
+    )
 
 
 
@@ -63,9 +127,16 @@ def _identity(finding: dict[str, Any]) -> tuple[str, str]:
 
 
 def classify(before: dict[str, Any], after: dict[str, Any]) -> list[dict[str, Any]]:
-    """Attribute every difference between two reports of the same capability."""
+    """Attribute every difference between two reports of the same capability.
+
+    With unequal scope nothing is attributable, and the differences say so and
+    carry the reason. The computation is identical either way — what changes is
+    the label, which keeps the classification in one place instead of spread over
+    four branches that would each need the same guard.
+    """
     rules_before = set(before.get("rules_run", []))
     rules_after = set(after.get("rules_run", []))
+    unequal, reason = scope_differs(before, after)
 
     index_before = {_identity(f): f for f in before.get("findings", [])}
     index_after = {_identity(f): f for f in after.get("findings", [])}
@@ -99,6 +170,12 @@ def classify(before: dict[str, Any], after: dict[str, Any]) -> list[dict[str, An
             differences.append(_difference(kind, None, finding))
 
     differences.sort(key=lambda d: (d["kind"], d["rule_id"], d["subject"]))
+
+    if unequal:
+        for diff in differences:
+            diff["kind"] = UNATTRIBUTED
+            diff["reason"] = reason
+        differences.sort(key=lambda d: (d["kind"], d["rule_id"], d["subject"]))
     return differences
 
 
@@ -176,14 +253,21 @@ def build(workspace_root: Path, domain: str, baseline_run: str | None,
     all_differences: list[dict[str, Any]] = []
     regressions: list[dict[str, Any]] = []
     provenance_changed: list[str] = []
+    scope_changed: list[str] = []
     pairs: list[dict[str, Any]] = []
+    scopes: list[dict[str, Any]] = []
 
     for capability in compared:
         before, after = before_runs[capability], after_runs[capability]
         differences = classify(before, after)
+        unequal, _ = scope_differs(before, after)
+
         for diff in differences:
             diff["capability"] = capability
             all_differences.append(diff)
+            # An unattributed difference never becomes a finding. `--strict` must
+            # not fail on something the tool cannot explain, and a reader scanning
+            # `findings` should see only claims the tool stands behind.
             if diff["kind"] == REGRESSION:
                 regressions.append(_regression_finding(diff, capability, current_run))
 
@@ -191,6 +275,16 @@ def build(workspace_root: Path, domain: str, baseline_run: str | None,
             provenance_changed.append(capability)
         if before.get("crawl_mode") != after.get("crawl_mode"):
             provenance_changed.append(capability)
+        if unequal:
+            scope_changed.append(capability)
+
+        before_pages, after_pages = scope_of(before), scope_of(after)
+        scopes.append({
+            "capability": capability,
+            "baseline_pages": before_pages,
+            "current_pages": after_pages,
+            "equal": not unequal,
+        })
         pairs.append({
             "capability": capability,
             "baseline_version": (before.get("tool") or {}).get("version"),
@@ -199,7 +293,7 @@ def build(workspace_root: Path, domain: str, baseline_run: str | None,
 
     counts = {
         kind: sum(1 for d in all_differences if d["kind"] == kind)
-        for kind in (REGRESSION, IMPROVEMENT, CHECK_CHANGE, SITE_CHANGE)
+        for kind in KINDS
     }
 
     return {
@@ -209,14 +303,18 @@ def build(workspace_root: Path, domain: str, baseline_run: str | None,
         "crawl_mode": "static",
         "site": {"url": "", "domain": domain},
         "capability": "compare",
-        "rules_run": [REGRESSION, IMPROVEMENT, CHECK_CHANGE, SITE_CHANGE],
+        "rules_run": list(KINDS),
         "baseline": {"run": baseline_run},
         "current": {"run": current_run},
         "provenance_changed": sorted(set(provenance_changed)),
+        "scope_changed": sorted(set(scope_changed)),
+        "scope": scopes,
         "compared": pairs,
         "summary": {
             "compared_capabilities": len(compared),
             **counts,
+            # Only attributed regressions are critical. Counting an unattributed
+            # difference here would let an unexplainable observation fail a build.
             "total_critical_issues": counts[REGRESSION],
             "total_warnings": counts[SITE_CHANGE],
         },

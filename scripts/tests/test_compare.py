@@ -32,8 +32,9 @@ def _finding(rule_id, subject, severity="critical"):
     }
 
 
-def _report(findings, rules_run, capability="on-page", version="0.2.0", crawl_mode="static"):
-    return {
+def _report(findings, rules_run, capability="on-page", version="0.2.0",
+            crawl_mode="static", pages=None):
+    report = {
         "report_version": "1",
         "tool": {"name": "website-optimizer", "version": version},
         "crawl_mode": crawl_mode,
@@ -42,6 +43,9 @@ def _report(findings, rules_run, capability="on-page", version="0.2.0", crawl_mo
         "rules_run": list(rules_run),
         "findings": findings,
     }
+    if pages is not None:
+        report["summary"] = {"audited_pages": pages}
+    return report
 
 
 RULES = ("title.missing", "img.alt.missing", "canonical.missing")
@@ -106,6 +110,87 @@ class ClassifyTest(unittest.TestCase):
         after = _report([_finding("img.alt.missing", "a.html")], RULES)
         # Without a declared rule set, a new critical finding is still a regression.
         self.assertEqual([d["kind"] for d in classify(before, after)], [REGRESSION])
+
+
+class ScopeTest(unittest.TestCase):
+    """A run that looked at a different amount of the site explains nothing.
+
+    Found by running compare on real stored runs: a baseline that was a live
+    crawl covering 25 of 173 pages against a static run covering all 173 reported
+    schema.identifier_conflicting as a regression. The rule set was identical and
+    the site had not moved. That rule has to meet the same @id on two pages, and
+    a quarter of the site cannot produce that.
+    """
+
+    def test_a_new_finding_across_unequal_scope_is_not_a_regression(self):
+        before = _report([], RULES, pages=25)
+        after = _report([_finding("schema.identifier_conflicting", "https://x/#artist")],
+                        RULES, pages=173)
+        diffs = classify(before, after)
+        self.assertEqual([d["kind"] for d in diffs], ["unattributed"])
+        # The reason has to name both counts, or it is just another verdict.
+        self.assertIn("25", diffs[0]["reason"])
+        self.assertIn("173", diffs[0]["reason"])
+
+    def test_a_vanished_finding_across_unequal_scope_is_not_an_improvement(self):
+        """Unequal scope confounds both directions, not only the alarming one.
+
+        Fewer pages is expected to find less, so a missing finding is no more
+        evidence of a fixed site than a new one is of a broken one.
+        """
+        before = _report([_finding("img.alt.missing", "a.html")], RULES, pages=173)
+        after = _report([], RULES, pages=25)
+        self.assertEqual([d["kind"] for d in classify(before, after)], ["unattributed"])
+
+    def test_equal_scope_still_classifies_normally(self):
+        before = _report([], RULES, pages=173)
+        after = _report([_finding("img.alt.missing", "a.html", "warning")], RULES, pages=173)
+        self.assertEqual([d["kind"] for d in classify(before, after)], ["site-change"])
+
+    def test_a_check_change_is_still_a_check_change_across_unequal_scope(self):
+        """The kind of difference is still known even when the site is not.
+
+        Withholding the label wholesale would lose information we do have: we
+        still know the rule set differs.
+        """
+        before = _report([], ("title.missing",), pages=25)
+        after = _report([_finding("img.alt.missing", "a.html")],
+                        ("title.missing", "img.alt.missing"), pages=173)
+        self.assertEqual([d["kind"] for d in classify(before, after)], ["unattributed"])
+
+    def test_unknown_scope_does_not_withhold_anything(self):
+        """A report without the counter must not silence every comparison.
+
+        Refusing against every older report would trade a narrow misattribution
+        for total silence, which is the trade D25 exists to prevent.
+        """
+        before = _report([], RULES)
+        after = _report([_finding("img.alt.missing", "a.html")], RULES)
+        self.assertEqual([d["kind"] for d in classify(before, after)], [REGRESSION])
+
+    def test_crawl_block_is_the_fallback_for_older_reports(self):
+        before = _report([], RULES)
+        before["crawl"] = {"requested": 25, "fetched": 25}
+        after = _report([_finding("img.alt.missing", "a.html")], RULES, pages=173)
+        self.assertEqual([d["kind"] for d in classify(before, after)], ["unattributed"])
+
+    def test_scope_is_reported_per_capability_in_the_comparison(self):
+        before = _report([], RULES, pages=25)
+        after = _report([_finding("img.alt.missing", "a.html")], RULES, pages=173)
+        with tempfile.TemporaryDirectory() as root:
+            for name, payload in (("b", before), ("c", after)):
+                d = Path(root) / "memory" / "evidence" / "websites" / "x" / "runs" / name
+                d.mkdir(parents=True)
+                (d / "report.json").write_text(json.dumps(payload), encoding="utf-8")
+            result = build(Path(root), "x", "b", "c")
+        self.assertEqual(result["scope_changed"], ["on-page"])
+        self.assertEqual(result["scope"][0]["baseline_pages"], 25)
+        self.assertEqual(result["scope"][0]["current_pages"], 173)
+        self.assertFalse(result["scope"][0]["equal"])
+        # Not a finding: --strict must not fail on something unexplained.
+        self.assertEqual(result["findings"], [])
+        self.assertEqual(result["summary"]["unattributed"], 1)
+        self.assertEqual(result["summary"]["regression"], 0)
 
 
 class RunSelectionTest(unittest.TestCase):

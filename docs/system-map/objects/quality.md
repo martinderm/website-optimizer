@@ -10,7 +10,7 @@ revision: a2dda236b34e6222be84c6068d84203f340219a8
 
 # Qualität
 
-148 Tests, Standardbibliothek `unittest`, kein Runner nötig.
+155 Tests, Standardbibliothek `unittest`, kein Runner nötig.
 
 ## Why this shape
 Der Authoring Guide verbietet pip-Abhängigkeiten; ein Test-Runner wie pytest wäre

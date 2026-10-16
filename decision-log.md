@@ -1014,3 +1014,46 @@ what inside it varied.
 whenever `CHECKS` does — the same shape as the existing round-trip test between
 `CHECKS` and the rules a capability can actually emit. Not built; noted so the
 next person does not rediscover it.
+
+---
+
+## D44 - A difference between runs of different size belongs to neither side
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** when the two runs of a capability observed different numbers of
+pages, every finding-level difference is labelled `unattributed` and carries a
+reason naming both counts. `unattributed` is not a cause and never becomes a
+finding, so `--strict` cannot fail on something the tool cannot explain.
+
+**Reason:** found by running `compare` for the first time against real stored
+runs. A baseline that was a live crawl covering 25 of 173 pages, compared with a
+static run covering all 173, reported `schema.identifier_conflicting` as a
+critical **regression**. The rule sets were identical and the site had not moved.
+That rule has to meet the same `@id` on two pages before it can call them
+conflicting, and a quarter of the site cannot produce that.
+
+`compare` read `rules_run`, tool version and crawl mode. It never read
+`audited_pages`. So the depth of observation was invisible to it, and a change in
+coverage was reported as a change in the site - which is the one claim a reader
+will act on.
+
+**Both directions are confounded, not only the alarming one.** Fewer pages is
+expected to find less, so a vanished finding is no more evidence of a fixed site
+than a new one is of a broken one. Withholding only regressions would have left
+the mirror-image error in place.
+
+**Why not a fifth *cause*:** naming a category `scope-change` asserts that the
+scope is the reason. Sometimes it is, and sometimes two things moved at once.
+`unattributed` asserts only what is true in every case - that no cause can be
+assigned - and hands the reader the two numbers to decide with.
+
+**What is still attributed, and why.** The rule-set difference is not withheld.
+With unequal scope we still know the tool changed, and losing that would trade a
+misattribution for a less informed report.
+
+**Unknown scope does not withhold.** A report without the counter stays
+comparable, because refusing against every older report would trade a narrow
+misattribution for total silence - the exact trade D25 exists to prevent.
