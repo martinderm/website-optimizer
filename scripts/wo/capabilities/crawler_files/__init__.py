@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from .audit import CHECKS, STATIC_ONLY, active_checks, audit_sources, run
+from .audit import CHECKS, STATIC_ONLY, audit_sources, checks_for, run
 
-__all__ = ["CHECKS", "STATIC_ONLY", "active_checks", "audit_sources", "run"]
+__all__ = ["CHECKS", "STATIC_ONLY", "audit_sources", "checks_for", "run"]

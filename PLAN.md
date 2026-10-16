@@ -62,9 +62,11 @@ website-optimizer/
 ├── decision-log.md           durable decisions D1–D57
 ├── README.md
 ├── LICENSE                   MIT
-├── references/               13 files
+├── references/               15 files
 │   ├── seo-core.md           titles, descriptions, canonicals, snippets, Open Graph
 │   ├── internal-linking.md   cornerstone content, anchor text, orphans, breadcrumbs
+│   ├── i18n.md               hreflang, language and region variants, x-default
+│   ├── pagination.md         series pages, faceted navigation, crawl space
 │   ├── indexing.md           robots.txt, sitemap, noindex, GSC, Bing
 │   ├── redirects.md          301 chains, wildcards, URL lifecycle, archives
 │   ├── structured-data.md    JSON-LD, @graph, schema types, rich results

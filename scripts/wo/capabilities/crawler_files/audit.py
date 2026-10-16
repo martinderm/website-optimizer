@@ -80,9 +80,13 @@ def _finding(rule_id, severity, message, observed, expected, subject, location):
     }
 
 
-def active_checks(live: bool) -> tuple[str, ...]:
-    """The rules that can run against the chosen source."""
-    if not live:
+def checks_for(has_build: bool) -> tuple[str, ...]:
+    """The rules that can run against the chosen source.
+
+    Derived from the same predicate that gates the rules themselves, so
+    `rules_run` cannot describe a rule set the run did not have.
+    """
+    if has_build:
         return CHECKS
     return tuple(check for check in CHECKS if check not in STATIC_ONLY)
 
@@ -142,10 +146,16 @@ def locks_out_everyone(text: str) -> bool:
     return False
 
 
-def blocked_assets(text: str) -> list[str]:
-    """Disallow rules that cut off delivery rather than content."""
-    blocked: list[str] = []
-    for _agents, rules in groups(text):
+def blocked_assets(text: str) -> list[tuple[str, str]]:
+    """Disallow rules that cut off delivery, with the agents they apply to.
+
+    The agent is carried so the message can name it. Blocking CSS for one named
+    crawler and blocking it for everyone are different decisions, and a reader who
+    cannot see which one they are looking at cannot judge it.
+    """
+    blocked: list[tuple[str, str]] = []
+    for agents, rules in groups(text):
+        who = ", ".join(agents) or "(no user-agent line)"
         for field, value in rules:
             if field != "disallow":
                 continue
@@ -155,37 +165,45 @@ def blocked_assets(text: str) -> list[str]:
                 continue
             prefix = "/" + value.lstrip("/").rstrip("/").lstrip("/")
             if any(prefix == p or prefix.startswith(p + "/") for p in ASSET_PREFIXES):
-                blocked.append(value)
+                blocked.append((who, value))
     return blocked
 
 
 # --- sitemap ---------------------------------------------------------------
 
 def read_sitemap(text: str, read_url: Callable[[str], str | None] | None,
-                 max_index: int = 50, max_depth: int = 2) -> tuple[list[str], str | None]:
+                 max_index: int = 50, max_depth: int = 2) -> tuple[list[str], str | None, int]:
     """Every URL a sitemap lists, following an index when there is one.
 
-    Returns the URLs and a problem: `None`, `"unreadable"` when the document is
-    not a sitemap at all or none of an index's children could be read, or
-    `"empty"` when it is a sitemap that lists nothing. The two are different
-    defects and the caller reports them differently.
+    Returns the URLs, a problem and how many sitemaps named inside an index could
+    not be read. The problem is `None`, `"unreadable"` when the document is not a
+    sitemap at all or nothing of an index could be read, `"empty"` when it is a
+    sitemap that lists nothing, or `"partial"` when some of an index's children
+    were read and some were not.
+
+    `"partial"` exists because it is the same failure as an unreadable sitemap one
+    level down, and it is the harder one to notice: the readable children look
+    like a complete sitemap, so coverage computed from them alone would report
+    every page listed only in the missing children as absent. Found by review, not
+    by a test, which is why the test was added at the same time as the state.
     """
     if text is None:
-        return [], None
+        return [], None, 0
 
     root_locs = sitemaps.locs(text)
     if not root_locs:
         if not sitemaps.looks_like_markup(text):
-            return [], "unreadable"
-        return [], "empty"
+            return [], "unreadable", 0
+        return [], "empty", 0
 
     if not sitemaps.is_index(text):
-        return root_locs, None
+        return root_locs, None, 0
 
     if read_url is None:
-        return [], "unreadable"
+        return [], "unreadable", 0
 
     collected: list[str] = []
+    unread = 0
     read_any = False
     seen: set[str] = set()
     queue: list[tuple[str, int]] = [(loc, 1) for loc in root_locs]
@@ -197,6 +215,7 @@ def read_sitemap(text: str, read_url: Callable[[str], str | None] | None,
         seen.add(current)
         body = read_url(current)
         if not body:
+            unread += 1
             continue
         read_any = True
         entries = sitemaps.locs(body)
@@ -209,8 +228,10 @@ def read_sitemap(text: str, read_url: Callable[[str], str | None] | None,
         collected.extend(entries)
 
     if not read_any:
-        return [], "unreadable"
-    return collected, None
+        return [], "unreadable", unread
+    if unread:
+        return collected, "partial", unread
+    return collected, None, 0
 
 
 def audit_sources(*, robots: str | None, sitemap: str | None, llms: str | None,
@@ -224,6 +245,8 @@ def audit_sources(*, robots: str | None, sitemap: str | None, llms: str | None,
     guessing.
     """
     findings: list[dict] = []
+
+    has_build = pages is not None and served is not None
 
     # --- robots.txt
     if robots is None:
@@ -240,12 +263,13 @@ def audit_sources(*, robots: str | None, sitemap: str | None, llms: str | None,
                 "looks healthy and cannot be indexed. The usual cause is a staging "
                 "lock that was never lifted.",
                 "/", "crawlable", "robots.txt", "robots.txt > Disallow"))
-        for value in blocked_assets(robots):
+        for who, value in blocked_assets(robots):
             findings.append(_finding(
                 "robots.blocks_asset", WARNING,
-                f"robots.txt disallows '{value}', which is delivery rather than "
-                f"content. A crawler that cannot fetch the CSS or the images cannot "
-                f"render the page, and a page it cannot render is not indexed well.",
+                f"robots.txt disallows '{value}' for {who}, which is delivery rather "
+                f"than content. A crawler that cannot fetch the CSS or the images "
+                f"cannot render the page, and a page it cannot render is not indexed "
+                f"well.",
                 value, "assets crawlable", "robots.txt", "robots.txt > Disallow"))
         if not sitemap_directives(robots):
             findings.append(_finding(
@@ -259,6 +283,7 @@ def audit_sources(*, robots: str | None, sitemap: str | None, llms: str | None,
     found = sitemap is not None
     sitemap_urls: list[str] = []
     problem: str | None = None
+    unread = 0
     if sitemap is None:
         findings.append(_finding(
             "sitemap.missing", WARNING,
@@ -266,7 +291,7 @@ def audit_sources(*, robots: str | None, sitemap: str | None, llms: str | None,
             "how a crawler learns about pages nothing links to yet.",
             None, "a sitemap", "sitemap.xml", "site root"))
     else:
-        sitemap_urls, problem = read_sitemap(sitemap, read_url)
+        sitemap_urls, problem, unread = read_sitemap(sitemap, read_url)
         if problem == "unreadable":
             findings.append(_finding(
                 "sitemap.unreadable", CRITICAL,
@@ -274,6 +299,13 @@ def audit_sources(*, robots: str | None, sitemap: str | None, llms: str | None,
                 "`<loc>` entries and no sitemap root element. A host answering every "
                 "path with its own page produces exactly this.",
                 None, "<urlset> or <sitemapindex>", "sitemap.xml", "sitemap"))
+        elif problem == "partial":
+            findings.append(_finding(
+                "sitemap.unreadable", CRITICAL,
+                f"The sitemap could not be read in full: {unread} of the sitemaps it "
+                f"names could not be fetched. No coverage is claimed from it — the "
+                f"parts that did load look complete and are not.",
+                unread, "every named sitemap readable", "sitemap.xml", "sitemapindex"))
         elif problem == "empty" or not sitemap_urls:
             findings.append(_finding(
                 "sitemap.empty", CRITICAL,
@@ -281,12 +313,12 @@ def audit_sources(*, robots: str | None, sitemap: str | None, llms: str | None,
                 "nothing to index.",
                 0, ">= 1 URL", "sitemap.xml", "sitemap"))
 
-    # Coverage is claimed only from a sitemap that was actually read. Reporting
-    # every page as absent because the sitemap failed to parse would be the
-    # loudest wrong answer available here.
+    # Coverage is claimed only from a sitemap that was read *in full*. Reporting
+    # every page as absent because the sitemap failed to parse — or because half
+    # of an index did not load — would be the loudest wrong answer available here.
     covered = found and problem is None and bool(sitemap_urls)
 
-    if covered and served is not None:
+    if covered and has_build:
         for url in sitemap_urls:
             path = urls.path_of(url, host)
             if path is None:
@@ -303,13 +335,15 @@ def audit_sources(*, robots: str | None, sitemap: str | None, llms: str | None,
                     f"does not exist.",
                     url, "a URL the build output serves", url, "sitemap > loc"))
 
-    if covered and pages is not None:
+    compared = 0
+    if covered and has_build:
         listed = {k for k in (urls.path_of(u, host) for u in sitemap_urls) if k}
         for page in pages:
             if page.is_404:
                 continue
             if page.robots and "noindex" in page.robots.lower():
                 continue
+            compared += 1
             if not (urls.page_urls(page.source) & listed):
                 findings.append(_finding(
                     "sitemap.absent_page", WARNING,
@@ -335,11 +369,14 @@ def audit_sources(*, robots: str | None, sitemap: str | None, llms: str | None,
 
     return {
         "findings": findings,
+        "rules_run": list(checks_for(has_build)),
         "sitemap_found": found,
         "sitemap_urls": len(sitemap_urls),
         "robots_found": robots is not None,
         "llms_found": llms is not None,
-        "checked_pages": len(pages) if (covered and pages is not None) else 0,
+        # Pages the coverage rule actually compared: a `noindex` page and the 404
+        # page are exempt, so counting them would overstate what was looked at.
+        "checked_pages": compared,
     }
 
 
@@ -432,13 +469,13 @@ def run(config, live: bool = False, run: str | None = None, **_ignored) -> dict[
         "site": {"url": config.site_url, "domain": config.domain},
         "capability": "crawler-files",
         "source": source,
-        "rules_run": list(active_checks(live)),
+        "rules_run": result["rules_run"],
         "summary": {
             "robots_found": result["robots_found"],
             "sitemap_found": result["sitemap_found"],
             "sitemap_urls": result["sitemap_urls"],
             "llms_found": result["llms_found"],
-            "checked_pages": result["checked_pages"] if not live else 0,
+            "checked_pages": result["checked_pages"],
             "total_critical_issues": critical,
             "total_warnings": len(findings) - critical,
         },

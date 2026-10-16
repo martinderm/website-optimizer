@@ -63,6 +63,8 @@ question, pointing at one file. It is filled in as the references land.
 | Titles, descriptions, canonicals, snippet formula | `references/seo-core.md` |
 | Open Graph, Twitter Cards, social previews | `references/seo-core.md` |
 | Cornerstone content, anchor text, orphans, breadcrumbs, URL structure | `references/internal-linking.md` |
+| Language and region variants, `hreflang`, return links, `x-default` | `references/i18n.md` |
+| Pagination, faceted navigation, filter parameters, crawl space | `references/pagination.md` |
 | `robots.txt`, sitemap, `noindex`, Search Console, Bing | `references/indexing.md` |
 | 301 redirects, chains, wildcards, URL lifecycle, archives | `references/redirects.md` |
 | JSON-LD, `@graph`, schema types, rich results | `references/structured-data.md` |

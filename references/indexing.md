@@ -47,8 +47,11 @@ template. See `static-sites.md`.
 
 **Measured by** `crawler-files`: `robots.missing`, `robots.blocks_site`,
 `robots.blocks_asset`, `robots.sitemap_missing`. What a machine cannot read is
-whether a blocked *path* was blocked on purpose — only the five usual delivery
-prefixes are recognised as mistakes.
+whether a blocked *path* was blocked on purpose: only the usual delivery prefixes
+are recognised as mistakes (`/css`, `/js`, `/images`, `/img`, `/media`, `/assets`,
+`/fonts`, `/static`, `/uploads`), and the finding names the agent the rule applies
+to, because blocking CSS for one named crawler and for everyone are different
+decisions.
 
 ## XML sitemap
 

@@ -36,6 +36,13 @@ INDEX = ('<?xml version="1.0" encoding="utf-8"?>'
 GOOD_ROBOTS = "User-agent: *\nDisallow: /admin/\n\nSitemap: https://example.com/sitemap.xml\n"
 
 
+def _index_of(*urls: str) -> str:
+    entries = "".join(f"<sitemap><loc>{u}</loc></sitemap>" for u in urls)
+    return ('<?xml version="1.0" encoding="utf-8"?>'
+            '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            + entries + "</sitemapindex>")
+
+
 def _urlset(*urls: str) -> str:
     return URLSET.format("".join(f"<url><loc>{u}</loc></url>" for u in urls))
 
@@ -75,6 +82,15 @@ class RobotsTest(unittest.TestCase):
                                   sitemap=None, llms=None)
         blocked = {f["observed"] for f in _by_rule(result, "robots.blocks_asset")}
         self.assertEqual(blocked, {"/css/", "/js/"})
+
+    def test_the_agent_a_block_applies_to_is_named(self):
+        """Blocking CSS for one crawler and for everyone are different decisions."""
+        site_wide = cf.audit_sources(robots="User-agent: *\nDisallow: /css/\n",
+                                     sitemap=None, llms=None)
+        one_agent = cf.audit_sources(robots="User-agent: Googlebot\nDisallow: /css/\n",
+                                     sitemap=None, llms=None)
+        self.assertIn("for *", _by_rule(site_wide, "robots.blocks_asset")[0]["message"])
+        self.assertIn("googlebot", _by_rule(one_agent, "robots.blocks_asset")[0]["message"])
 
     def test_a_sitemap_directive_is_required_but_not_invented(self):
         with_directive = cf.audit_sources(robots=GOOD_ROBOTS, sitemap=None, llms=None)
@@ -147,7 +163,8 @@ class SitemapTest(unittest.TestCase):
         result = cf.audit_sources(
             robots=GOOD_ROBOTS, sitemap=_urlset("https://example.com/a/",
                                                 "https://example.com/gone/"),
-            llms=None, served={"/a"}, host="example.com")
+            llms=None, pages=[Page(source="a/index.html")], served={"/a"},
+            host="example.com")
         findings = _by_rule(result, "sitemap.unsupported_url")
         # The subject is the URL as the sitemap writes it, not the resolved path:
         # that is the string somebody has to find and change, and a sitemap entry
@@ -159,10 +176,49 @@ class SitemapTest(unittest.TestCase):
     def test_a_sitemap_naming_another_site_is_reported(self):
         result = cf.audit_sources(
             robots=GOOD_ROBOTS, sitemap=_urlset("https://other.example/x/"),
-            llms=None, served=set(), host="example.com")
+            llms=None, pages=[], served=set(), host="example.com")
         findings = _by_rule(result, "sitemap.unsupported_url")
         self.assertEqual(len(findings), 1)
         self.assertIn("other.example", findings[0]["message"])
+
+    def test_a_partially_readable_index_claims_no_coverage(self):
+        """Found by review, and it is D56 one level down.
+
+        An index naming two child sitemaps, one of which cannot be fetched, looks
+        complete from the child that did load. Coverage computed from it alone
+        reported every page listed only in the missing child as absent from the
+        sitemap — the same hundred-plausible-findings failure the rule above this
+        one exists to prevent, arriving through a different door.
+        """
+        index = _index_of("https://example.com/a.xml", "https://example.com/b.xml")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "index.html").write_text("<p>home</p>", encoding="utf-8")
+            (root / "b" / "index.html").parent.mkdir(parents=True)
+            (root / "b" / "index.html").write_text("<p>b</p>", encoding="utf-8")
+            pages = [
+                extract_page(root / "index.html", "index.html"),
+                extract_page(root / "b" / "index.html", "b/index.html"),
+            ]
+        result = cf.audit_sources(
+            robots=GOOD_ROBOTS, sitemap=index, llms=None, pages=pages,
+            served={"/", "/b"},
+            read_url=lambda url: _urlset("https://example.com/")
+            if url.endswith("a.xml") else None,
+            host="example.com")
+        self.assertEqual(_by_rule(result, "sitemap.absent_page"), [])
+        self.assertEqual(result["checked_pages"], 0)
+        partial = _by_rule(result, "sitemap.unreadable")
+        self.assertEqual(len(partial), 1)
+        self.assertIn("could not be read in full", partial[0]["message"])
+
+    def test_checked_pages_counts_only_what_was_compared(self):
+        result = cf.audit_sources(
+            robots=GOOD_ROBOTS, sitemap=_urlset("https://example.com/a/"), llms=None,
+            pages=[Page(source="a/index.html"), Page(source="404.html", is_404=True),
+                   Page(source="s/index.html", robots="noindex")],
+            served={"/a"}, host="example.com")
+        self.assertEqual(result["checked_pages"], 1)
 
     def test_coverage_is_not_claimed_without_a_build(self):
         """Live mode has no build, so the two build-only rules cannot run.
@@ -213,8 +269,20 @@ class ContractTest(unittest.TestCase):
 
     def test_the_two_build_only_rules_drop_out_of_a_live_run(self):
         self.assertIn("sitemap.absent_page", cf.STATIC_ONLY)
-        self.assertNotIn("sitemap.absent_page", cf.active_checks(live=True))
-        self.assertEqual(set(cf.active_checks(live=False)), set(cf.CHECKS))
+        self.assertNotIn("sitemap.absent_page", cf.checks_for(False))
+        self.assertEqual(set(cf.checks_for(True)), set(cf.CHECKS))
+
+    def test_a_rule_never_runs_without_being_declared(self):
+        """`rules_run` and the gate come from one predicate, not two.
+
+        Review found the first version deriving `rules_run` from a static list
+        while the rules were gated independently — agreeing only because `run()`
+        happens to pass both by the same branch. This asserts the declaration and
+        the behaviour from one call each.
+        """
+        no_build = cf.audit_sources(robots=GOOD_ROBOTS, sitemap=EMPTY_URLSET, llms=None)
+        self.assertEqual(set(no_build["rules_run"]), set(cf.checks_for(False)))
+        self.assertNotIn("sitemap.absent_page", no_build["rules_run"])
 
     def test_the_report_conforms_to_its_schema(self):
         with tempfile.TemporaryDirectory() as tmp:

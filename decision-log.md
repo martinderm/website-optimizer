@@ -1523,6 +1523,25 @@ nothing, the second says the host serves its own page at that path. One rule eac
 because collapsing them would lose the one piece of information that says where to
 look.
 
+**Amended the same day, by review, and the amendment is the interesting part.** The
+decision above was right and incomplete. It named the sitemap that cannot be read;
+it did not name the sitemap *index whose children only partly load*. A child that
+loads looks like a complete sitemap, so coverage computed from the readable
+children alone reported every page listed only in the missing child as absent —
+the same hundred-plausible-findings failure, through a different door, and harder
+to see because most of the input was fine.
+
+Found by an independent review of the diff rather than by a test. The fix adds a
+third state, `partial`, to the sitemap reader; the test was written with it and
+observed red against the old behaviour before the fix was kept.
+
+**The mechanism behind it was wrong too.** `rules_run` was derived from a static
+list of build-only rules while the rules themselves were gated by two independent
+`None` checks — agreeing only because one function happened to pass both by the
+same branch. There is now one predicate, and it both gates the rules and produces
+`rules_run`. That is the same defect as the coverage one, one level up: a claim
+about what ran, derived from something other than what ran.
+
 ---
 
 ## D57 - Shared syntax gets one home the moment a second caller appears
@@ -1556,3 +1575,51 @@ the capability boundary exists to prevent.
 was verified to still pass before and after — and `test_version_follows_rules`
 plus the map guard stayed green, none of which would have been true if a rule had
 moved.
+
+---
+
+## D58 - Two reference files land, and no capability follows them
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** `references/i18n.md` and `references/pagination.md` are written and
+neither gets a capability. Each says inside itself which of its own items a build
+audit could check.
+
+**Reason — D47 applied twice, to two different kinds of missing input.**
+
+*Internationalisation.* Most of what `i18n.md` describes **is** checkable from
+build output: reciprocity, self-reference, code shape, `x-default`, no `noindex`,
+one method. It is the same graph shape `links` already builds. It is not built
+because **no bound site has more than one language**, so the fixture set does not
+exist and a checker would be written against imagined markup — the exact failure
+D47 exists to prevent, one step earlier in the pipeline. This is the one gap in
+this series that is a *fixture* problem rather than a measurement problem, and
+it is worth naming as such so the next person does not conclude it is impossible.
+
+*Pagination and facets.* Here the input genuinely does not exist. A build shows
+the pages that exist; the defect is the pages that *would* exist if a filter
+combination were asked for. That space is generated at request time and never
+appears in a crawl, which is the same boundary `redirects` runs into.
+
+**Writing the reference first is not a smaller version of the work.** Both files
+name what a check could prove and what needs a console or a human. That separation
+is the deliverable; a capability built from it without fixtures would assert more
+than the files do.
+
+**What the sources cost, and it was worth it.** `i18n.md`'s first draft asserted
+three things from memory that the Google page contradicts: that the values are
+BCP 47 (they are two narrower lists, and `es-419` is unsupported), that all three
+annotation methods must not be mixed (they may be, it is only wasteful), and that
+`hreflang` and `<html lang>` must agree (Google uses neither to detect language;
+the agreement matters for screen readers, which is a different reason). Two of the
+three would have been *plausible* rules. `sources.md` records the correction, and
+`last_verified` moved because the source was actually opened — which is the point
+that log exists to make.
+
+For `pagination.md` the same check found a contradiction worth keeping: Google's
+2019 announcement retired `rel="next"`/`rel="prev"` as an indexing signal, and
+Google's own faceted-navigation page still lists them, because it descends from
+2014 material. The file says both rather than picking the tidier one.

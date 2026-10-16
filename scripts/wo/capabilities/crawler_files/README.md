@@ -40,20 +40,24 @@ worth finding on any site, including one with no build output at all, so a live
 run reports less rather than nothing: the two build-only rules leave `rules_run`,
 which is how a reader can tell they were skipped instead of passing.
 
-The live path fetches exactly four documents — `robots.txt`, `llms.txt`, the
-sitemap, and any sitemap the index names. It does not render pages and does not
-need a browser.
+The live path fetches the three documents, following a sitemap index to its
+children. It renders no pages and needs no browser.
 
-## No coverage claim from a sitemap that could not be read
+## No coverage claim from a sitemap that could not be read *in full*
 
 This is the one rule interaction worth knowing about. If the sitemap is missing,
-unreadable, or empty, the two coverage rules are **skipped entirely** — because
-the alternative is a sitemap that fails to parse making every page on the site
-look absent from it. That is the loudest wrong answer available here, and it
-would arrive as a hundred warnings.
+unreadable, empty - **or an index whose children only partly loaded** - the two
+coverage rules are skipped entirely, because the alternative is a sitemap that
+fails to parse making every page on the site look absent from it: the loudest
+wrong answer available here, arriving as a hundred warnings.
 
-`checked_pages: 0` in the summary is therefore not "no pages" but "no coverage
-was claimed". It is 0 in every live run for the same reason.
+The partial case is the harder one, because the child that *did* load looks like a
+complete sitemap. It was found by an independent review of this file rather than
+by a test; the test was written with the fix, and it fails without it.
+
+`checked_pages: 0` in the summary is therefore not "no pages" but "no coverage was
+claimed" - and where coverage *was* claimed it counts the pages actually compared,
+so the 404 page and any `noindex` page are not in it.
 
 ## What it does not check
 
