@@ -490,7 +490,10 @@ wall guard), D35 (UTF-8, not the terminal's encoding), D36 (no shell).
   single-route check. For that case there is `curl -I`. Named in both the
   workspace README and the runbook, because a migration that quietly drops a
   feature reads as equivalence.
-- Decide on CI. Without it a parity check is a snapshot, not a guarantee.
+- ~~Decide on CI~~ decided 2026-10-16: no CI, run manually at launch or on
+  demand. D39. The 142 tests run in under three seconds and need no network. The
+  cost is that a rule regression now reaches a site audit before anyone notices;
+  revisit if the skill is bound in more than two workspaces.
 
 ### Round 7 — open findings from verification
 

@@ -856,3 +856,29 @@ is a bare host, since every canonical on that host starts with it. It only fires
 for a base carrying a path prefix. That was true before this change, so the rule
 was silently dead for most single-host installs. The tests now cover the one
 shape that reaches it.
+
+---
+
+## D39 - No CI; a parity check runs at launch or when someone asks
+
+**Status:** accepted, provisional
+**Date:** 2026-10-16
+**Support level:** inherited
+
+**Decision:** no continuous integration. Every capability is run manually - at a
+site launch, or on demand when something looks wrong.
+
+**Reason:** the value of a parity check here is catching a port that drifts from
+the thing it replaced, and both originals are now deleted, so there is nothing
+left to diff against. What remains worth automating - the 142 tests - runs in
+under three seconds and needs no network, no browser and no fixtures beyond what
+is in the repository.
+
+**Consequence, stated plainly:** a regression in a rule now reaches a site audit
+before anyone notices. The tests make that unlikely; they do not make it
+impossible to be late. If the skill is bound in more workspaces than two, this
+decision should be revisited, because "someone remembers to run it" degrades with
+the number of places it has to be remembered.
+
+**What would change the decision:** a third workspace binding, or a rule change
+that is hard to review by eye. Nothing has hit that yet.
