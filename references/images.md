@@ -73,6 +73,28 @@ Use it for everything below the fold. Leave the first meaningful image eager.
 Lazy loading an element that is initially above the fold is a bug, not a
 caution.
 
+**Auditing this is a two-part answer.** Whether an image sits above the fold
+needs a layout, so a static pass cannot tell a deliberate `eager` from a missing
+attribute. What it can do is tell you the shape:
+
+- `image.loading_unset` — no image on the page declares a strategy. That is a
+  defect on every one of them.
+- `image.loading_partial` — some do, some do not. An **open question**, not a
+  verdict: the ones with a strategy are plausibly above the fold, which would
+  make the rest lazy-load candidates. Closing it means measuring, not guessing.
+
+Treat the second as a prompt to look, never as a defect list to work through.
+On real sites it is by far the commoner case, and it was silent until recently:
+one WordPress page carried 42 map tiles, none of them declaring anything, and the
+audit reported nothing about them.
+
+An `<img>` with **no `src` at all** is a separate matter — nothing loads for it,
+so it reserves no space and causes no shift. It is reported once as
+`image.src_missing` and is not also counted as a missing dimension or a missing
+`srcset`. Watch for the bare-attribute form (`<img src alt>`): it parses as
+`src=""`, resolves against the document, and makes the browser request the page
+itself as an image.
+
 ## Alt text
 
 - `alt` describes what the image conveys, for someone who cannot see it.

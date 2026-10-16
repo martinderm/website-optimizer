@@ -62,6 +62,11 @@ Rules:
   fragile across environments.
 - The canonical must match the domain that is actually canonical for the site,
   and the non-canonical host must redirect there permanently (see `caddy`).
+- When auditing, `[site] url` must be **that** domain — the one the site
+  canonicalises to, not the one that redirects to it. The audit compares against
+  what the config says. `www` against apex is the commonest WordPress
+  misconfiguration there is, and configuring it the wrong way produces the same
+  finding on every page, which is worse than no finding at all.
 - A canonical pointing at another domain that does not redirect hands ranking
   authority away and usually indicates a staging URL that escaped into
   production.
