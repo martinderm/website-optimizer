@@ -1139,3 +1139,37 @@ does not read `return` or `rewrite`; here is the export format that it does read
 options and keeps the decision with the site. What changed is that the way in
 through the wrong file is now loud, named, and actionable - which is what makes
 "decide at the point of need" safe to recommend.
+
+---
+
+## D47 - A source for nginx or a database is built when a site needs it
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** inherited
+
+**Decision:** `redirects` gains no parser for nginx `server` blocks and none for
+the WordPress database. When a specific site needs one, that site supplies the
+input and it gets built then.
+
+**Reason:** the fixtures. A parser written now would be written against a shape
+someone imagined, and the tests would encode the imagination. Written when a real
+vhost or a real database is in front of it, the test cases are the actual file -
+which is the difference between a parser that handles the syntax and one that
+handles the syntax its author happened to think of.
+
+D46 is the worked example of what that is worth. The nginx trap was not found by
+reasoning about nginx; it was found by writing prose about it, going to check the
+code, and measuring a real vhost against the parser. The measurement is three
+lines and could not have been written in advance.
+
+**What makes deferring safe.** The wrong way in is now loud, named and
+actionable: pointing the capability at an nginx config raises with the trap and
+the way out in the message. Without D46 this decision would be worse than it
+sounds - a deferred feature is harmless, a deferred feature that fails silently
+is not.
+
+**Consequence for the plan.** Round 8's second item stops being open work and
+becomes a trigger: build when a site has redirects that are not in a file and
+someone asks for the audit. Until then, switching the capability off per site,
+with the reason in the config, is the whole answer.

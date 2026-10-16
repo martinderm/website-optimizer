@@ -59,7 +59,7 @@ line says otherwise.
 website-optimizer/
 ├── SKILL.md                  router + source-of-truth table
 ├── PLAN.md                   this file
-├── decision-log.md           durable decisions D1–D46
+├── decision-log.md           durable decisions D1–D47
 ├── README.md
 ├── LICENSE                   MIT
 ├── references/               13 files
@@ -521,11 +521,12 @@ that were not on any list:
 Found by asking whether the skill could be bound into `wordpress-wizard`, which
 it could not until the sitemap fix existed.
 
-- `redirects` has no source on WordPress. It reads a rule file; WordPress on
-  nginx has no `.htaccess` and keeps its redirects in the database or a plugin.
-  Until that is answered it is switched off per site, with the reason written
-  into the site config rather than left as a silence. Not a WordPress-only
-  problem: any platform whose redirects are not a file is in the same state.
+- `redirects` has no source where the rules are not a file. **Not open work — a
+  trigger.** Build it when a specific site has redirects that are not in a file
+  and someone asks for the audit; that site then supplies the input and the test
+  fixtures at the same time. D47. Until then, switching the capability off per
+  site with the reason in the config is the whole answer, and doing so is safe
+  because the wrong way in raises loudly with the trap and the way out (D46).
 - Consent handling is answered, not deferred. `[crawl] profile` lets a site name
   a browser profile that has already accepted its cookie banner; a relative path
   resolves against the workspace, so the profile can live per agent workspace or

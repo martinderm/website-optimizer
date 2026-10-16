@@ -185,3 +185,13 @@ redirect map nobody maintains is a redirect map that is wrong by the next releas
 live, who maintains them — is normative and belongs in the workspace's site
 dossier. The paths and limits are parameters and belong in the site config. One
 home per fact, and they are not the same fact.
+
+**And build support for a sourceless platform when a site needs it, not before.**
+A parser written before a real file exists is written against a shape someone
+imagined, and its tests encode the imagination. Written when a real vhost or a
+real database is in front of it, the fixtures *are* the actual thing — which is
+the difference between handling the syntax and handling the syntax its author
+happened to think of.
+
+The measured nginx trap above is the argument for it. It was not found by
+reasoning about nginx and could not have been; it was found by testing one.
