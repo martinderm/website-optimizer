@@ -56,6 +56,25 @@ deliberately has no path by which a server's HTML could reach the report (D13).
 A passing rule produces a row in `checks`, never a finding. The verdict is
 derived from the rows.
 
+## When the rules are not in a file
+
+This capability reads rules from a **file**. On a platform that keeps them
+elsewhere — WordPress on nginx stores them in the database — there is nothing to
+point it at, and the honest move is to switch it off for that site rather than
+let it report "no rules found" about a site that has redirects. Switching it off
+means removing it from `[audit] capabilities`, with the reason written in the
+config next to the omission.
+
+The trade-offs between the possible sources — reading the database, reading the
+server config, checking a URL list against the live server — are weighed in
+`references/redirects.md` under *When the rules are not in a file*. That file is
+the right home for it: it is a per-site decision, and the decision belongs to the
+site, not to this capability.
+
+**Whatever a future source turns out to be, it has to name itself.** The report
+already carries `source.kind`; a new source is a new value there, and a run that
+cannot say where it read from is indistinguishable from a run that found nothing.
+
 ## Adding a file type
 
 Add a parser in `parse.py` returning `list[tuple[source, target, wildcard]]`, a

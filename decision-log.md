@@ -947,3 +947,33 @@ used to log in carries the session cookie. The tool creates the directory and
 never reads, writes, or reports its contents; the config names it by path only.
 Any workspace using this must keep the path out of git - the profile directory
 itself is the sensitive artifact, not the line pointing at it.
+
+---
+
+## D42 - Advisory guidance belongs in references, marked as advisory
+
+**Status:** accepted
+**Date:** 2026-10-16
+**Support level:** observed
+
+**Decision:** the trade-offs of the available redirect sources are documented in
+`references/redirects.md` under a heading that says it is advisory, not a rule.
+The recommendation is that a URL list checked against the live server beats every
+form of reading the stored rules. The decision remains the site's.
+
+**Reason:** the skill's job is to measure *and advise* - that is its own
+definition - so advice is in scope. What is not in scope is the decision, because
+a recommendation written into a shared skill becomes a default in disguise: the
+next workspace inherits it without the context that produced it, and the site
+whose nginx config is right gets talked out of reading it.
+
+**Where it lives, and why not elsewhere.** Not the decision log: that records
+what was decided here, and no decision was made. Not `SKILL.md`: that is a router
+carrying no content. In the topic reference, next to the rule it qualifies - the
+checklist already demands redirects be verified by fetching them, and this is what
+that means when fetching them is the only option left.
+
+**Marked, not claimed.** The section says in its first line that it is advisory.
+An unmarked opinion in a file whose front matter says `evidence_level: normative`
+would be read with the authority of the rule above it, which is the same failure
+in miniature as writing the decision at all.

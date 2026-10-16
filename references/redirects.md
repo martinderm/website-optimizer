@@ -126,3 +126,49 @@ curl -sI https://old.example.com/legacy/path/
 
 Expect `301` and a single `Location`. Then follow it and expect `200`. A chain
 shows up as several `301` responses before the `200`.
+
+## When the rules are not in a file
+
+*Advisory, not a rule. The decision belongs to the site; this is what to weigh
+before making it.*
+
+The checklist above assumes the rules can be read somewhere. On most platforms
+they cannot:
+
+| Platform | Where redirects usually live | Readable as a file |
+|---|---|---|
+| Apache | `.htaccess` or vhost config | yes |
+| Netlify / Cloudflare Pages | `_redirects` | yes |
+| nginx | `server` block in the site config | yes, but only on the server |
+| WordPress | database — core, Redirection, or an SEO plugin | no |
+
+The last row is the one that bites. WordPress has no `.htaccess` on nginx, and
+its redirects are rows in a database whose shape changes with every plugin
+update.
+
+**Weigh these before choosing a source:**
+
+- *Read the database.* Answers "what is stored", which is not the question anyone
+  has. The schema moves under you, and a silently wrong read is worse than no
+  read: it produces a confident clean bill of health for a site that is losing
+  traffic.
+- *Read the server config.* True, but it has to be re-read per deployment and it
+  does not exist on the machine doing the audit.
+- *Check a URL list against the live server.* Survives every update, works on
+  every platform, and answers the question that actually matters: *does this old
+  URL still go where it should?* Its limit is real — it can only check URLs
+  someone remembered to write down.
+
+**Whatever the source, the report must say which one it used.** A redirect audit
+that does not name its source is indistinguishable from one that found nothing.
+The same holds for the finding: a run that checked twenty remembered URLs is not
+a statement about the other eight hundred, and must not read like one.
+
+**Record the decision and its owner, not just its source.** "nginx" is half an
+answer. The other half is who synchronises it after a deployment, and when. A
+redirect map nobody maintains is a redirect map that is wrong by the next release.
+
+**Keep it in two places, with different jobs.** The decision — where the rules
+live, who maintains them — is normative and belongs in the workspace's site
+dossier. The paths and limits are parameters and belong in the site config. One
+home per fact, and they are not the same fact.
