@@ -2,7 +2,7 @@
 document_type: plan
 title: "Plan — website-optimizer"
 status: draft
-owner: "dagobert-ai / website-optimizer"
+owner: "website-optimizer"
 version: "0.3"
 date: 2026-10-15
 last_verified: 2026-10-15

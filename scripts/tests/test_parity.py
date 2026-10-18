@@ -15,6 +15,7 @@ Skipped once the original is gone, which is the intended end state.
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 import tempfile
@@ -26,9 +27,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from wo.capabilities.on_page.audit import find_static_dir, run  # noqa: E402
 from wo.config import SiteConfig  # noqa: E402
 
-ORIGINAL = Path("D:/users/dagobert/agents/hugo-wizard/scripts/audit-site-seo.py")
 FIXTURES = Path(__file__).resolve().parent / "fixtures" / "site"
 SITE_URL = "https://example.com"
+
+
+def _original_script() -> Path:
+    """The reference implementation the port was verified against.
+
+    Operator-provided via `WO_PARITY_ORIGINAL`, else discovered by walking up
+    from this file for a `hugo-wizard` checkout — the layout this port was
+    born in, expressed without any machine's absolute path. Absent means the
+    suite skips, not fails: the port no longer needs its original to run.
+    """
+    override = os.environ.get("WO_PARITY_ORIGINAL")
+    if override:
+        return Path(override)
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "hugo-wizard" / "scripts" / "audit-site-seo.py"
+        if candidate.is_file():
+            return candidate
+    return Path("audit-site-seo.py")
+
+
+ORIGINAL = _original_script()
 
 
 def _triples_from_original(target: Path) -> set[tuple[str, str, str]]:
@@ -96,6 +117,25 @@ class ParityTest(unittest.TestCase):
     def test_original_module_still_importable_for_future_reference(self):
         spec = importlib.util.spec_from_file_location("legacy_audit", ORIGINAL)
         self.assertIsNotNone(spec and spec.loader)
+
+
+class DiscoveryTest(unittest.TestCase):
+    def test_env_override_is_honored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "custom-original.py"
+            target.write_text("# operator-provided reference", encoding="utf-8")
+            previous = os.environ.get("WO_PARITY_ORIGINAL")
+            os.environ["WO_PARITY_ORIGINAL"] = str(target)
+            try:
+                self.assertEqual(_original_script(), target)
+            finally:
+                if previous is None:
+                    del os.environ["WO_PARITY_ORIGINAL"]
+                else:
+                    os.environ["WO_PARITY_ORIGINAL"] = previous
+
+    def test_absent_everywhere_means_skip_not_failure(self):
+        self.assertFalse(ORIGINAL.is_file())
 
 
 if __name__ == "__main__":

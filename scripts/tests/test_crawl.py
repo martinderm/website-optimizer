@@ -296,7 +296,7 @@ class ProfileTest(unittest.TestCase):
         log: list = []
         pages = {"https://example.com/a/": "<html lang=de><title>t</title></html>"}
         with tempfile.TemporaryDirectory() as tmp:
-            elsewhere = Path(tmp) / "machine-profiles" / "theresienhof"
+            elsewhere = Path(tmp) / "machine-profiles" / "client-site"
             cfg = _config(tmp, settle_ms=0, profile=str(elsewhere))
             original = crawl._run_cli
             crawl._run_cli = _fake_runner(pages, log)
