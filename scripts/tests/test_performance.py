@@ -447,6 +447,11 @@ class ContractTest(unittest.TestCase):
                 result, "example.com", "https://example.com",
                 {"kind": "static_dir", "path": "public"})
             self.assertEqual(jsonschema.validate(report, json.loads(SCHEMA.read_text())), [])
+            # The base schema's `findings` requirement resolves only at runtime
+            # ($ref is not expanded here), so the key is pinned directly: a
+            # report without findings passes this test and fails the run.
+            self.assertIn("findings", report)
+            self.assertEqual(jsonschema.validate(report, json.loads(SCHEMA.read_text())), [])
 
 
 if __name__ == "__main__":

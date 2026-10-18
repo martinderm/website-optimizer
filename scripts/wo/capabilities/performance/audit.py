@@ -491,8 +491,8 @@ def to_report(result: dict[str, Any], host: str, site_url: str, source: dict) ->
         "capability": "performance",
         "source": source,
         "rules_run": result["rules_run"],
-        "summary": {
-            "audited_pages": result["pages_weighed"],
+        "findings": findings,
+        "summary": {            "audited_pages": result["pages_weighed"],
             "ignored_pages": 0,
             "budgets_exceeded": result["budgets_exceeded"],
             "third_party_origins": result["third_party_origins"],
