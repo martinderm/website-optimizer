@@ -63,7 +63,17 @@ finding reports the measured number, not the wire.
 - **The 404 page.** It is not a view, so it is neither weighed nor scanned.
 - **Inline `<style>` and `<script>` bodies.** They are authored code, and
   `Page` retains no authored code (D13). A `@font-face` in an inline `<style>`
-  block is therefore not read — only served stylesheets are.
+  block is therefore not read — only served stylesheets are. An inline
+  `<script>` in `<head>` is equally never judged, though it blocks just the
+  same: weighing it would need the body, and the body is out of bounds.
+- **`@import` chains.** A stylesheet that imports another stylesheet is weighed
+  for its own bytes only; the chain is not followed, and faces declared in the
+  imported file are not read.
+- **Foreign `url()` targets inside stylesheets.** Skipped by the weight rules
+  (the build cannot contain another host) and not inventoried either — the
+  third-party rule scans markup, not CSS. A font loaded from a CDN is the one
+  third party this capability can miss; the reference's font guidance
+  (self-host) is the reason it stays a minor gap rather than a finding.
 - **Lab and field numbers.** LCP, INP, CLS themselves and caching headers need
   measurement this tool does not do. That half of `references/performance.md`
   stays advice until a workspace brings a trusted lab or field source.

@@ -106,7 +106,7 @@ class ExtractionTest(unittest.TestCase):
 
 
 class BudgetTest(unittest.TestCase):
-    def test_stylesheet_weight_over_budget_is_one_finding_on_the_page(self):
+    def test_stylesheet_weight_over_budget_is_one_finding_on_the_file(self):
         result = _audit({
             "index.html": '<html><head><link rel="stylesheet" href="/css/big.css"></head>'
                           "<body><p>x</p></body></html>",
@@ -114,9 +114,9 @@ class BudgetTest(unittest.TestCase):
         })
         findings = _by_rule(result, "perf.budget_exceeded")
         self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0]["subject"], "index.html")
+        self.assertEqual(findings[0]["subject"], "/css/big.css")
         self.assertEqual(findings[0]["observed"], 153600)
-        self.assertIn("stylesheet", findings[0]["message"].lower())
+        self.assertIn("1 page(s)", findings[0]["message"])
 
     def test_weight_under_every_budget_is_silence(self):
         result = _audit({
@@ -134,7 +134,7 @@ class BudgetTest(unittest.TestCase):
         })
         findings = _by_rule(result, "perf.budget_exceeded")
         self.assertEqual(len(findings), 1)
-        self.assertIn("script", findings[0]["message"].lower())
+        self.assertEqual(findings[0]["subject"], "/js/big.js")
 
     def test_the_largest_image_counts_against_the_hero_budget(self):
         result = _audit({
@@ -178,6 +178,48 @@ class BudgetTest(unittest.TestCase):
         })
         self.assertEqual(_by_rule(result, "perf.budget_exceeded"), [])
 
+    def test_a_shared_heavy_stylesheet_is_one_finding_naming_both_pages(self):
+        """D52: one file in a site-wide template is one defect, not one per page."""
+        result = _audit({
+            "index.html": '<html><head><link rel="stylesheet" href="/css/big.css"></head>'
+                          "<body><p>x</p></body></html>",
+            "sub/index.html": '<html><head><link rel="stylesheet" href="/css/big.css"></head>'
+                              "<body><p>y</p></body></html>",
+            "css/big.css": _pad(153600),
+        })
+        findings = _by_rule(result, "perf.budget_exceeded")
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["subject"], "/css/big.css")
+        self.assertIn("2 page(s)", findings[0]["message"])
+
+    def test_light_files_adding_up_over_budget_report_the_composition(self):
+        """No single file over budget, but the page total is: the composition
+        is the finding, once, on the page — and never stacked on a file finding."""
+        result = _audit({
+            "index.html": "<html><head>"
+                          '<link rel="stylesheet" href="/css/a.css">'
+                          '<link rel="stylesheet" href="/css/b.css"></head>'
+                          "<body><p>x</p></body></html>",
+            "css/a.css": _pad(61440),
+            "css/b.css": _pad(61440),
+        })
+        findings = _by_rule(result, "perf.budget_exceeded")
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["subject"], "index.html")
+        self.assertIn("composition", findings[0]["message"])
+
+    def test_a_relative_reference_from_a_top_level_page_resolves(self):
+        """Regression: the page directory of `index.html` is `/`, and joining
+        it by concatenation produced a `//`-key that `served` never holds."""
+        result = _audit({
+            "index.html": '<html><head><link rel="stylesheet" href="css/big.css"></head>'
+                          "<body><p>x</p></body></html>",
+            "css/big.css": _pad(153600),
+        })
+        findings = _by_rule(result, "perf.budget_exceeded")
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["subject"], "/css/big.css")
+
 
 class BlockingTest(unittest.TestCase):
     def test_a_plain_head_script_blocks(self):
@@ -215,6 +257,31 @@ class BlockingTest(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertIn("2 page(s)", findings[0]["message"])
 
+    def test_spelling_variants_of_one_file_are_one_finding(self):
+        result = _audit({
+            "index.html": '<html><head><script src="/js/a.js"></script></head>'
+                          "<body><p>x</p></body></html>",
+            "sub/index.html": "<html><head>"
+                              '<script src="https://example.com/js/a.js"></script>'
+                              "</head><body><p>y</p></body></html>",
+            "js/a.js": "var a = 1;",
+        })
+        findings = _by_rule(result, "perf.render_blocking_script")
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["subject"], "/js/a.js")
+        self.assertIn("2 page(s)", findings[0]["message"])
+
+    def test_defer_false_still_defers(self):
+        """Boolean attributes are true by presence: browsers defer
+        `defer="false"`. Firing on it would contradict the platform to honor
+        an author's probable typo."""
+        result = _audit({
+            "index.html": '<html><head><script src="/js/a.js" defer="false"></script></head>'
+                          "<body><p>x</p></body></html>",
+            "js/a.js": "var a = 1;",
+        })
+        self.assertEqual(_by_rule(result, "perf.render_blocking_script"), [])
+
 
 class FontDisplayTest(unittest.TestCase):
     def test_a_face_without_font_display_is_reported_per_file(self):
@@ -242,6 +309,15 @@ class FontDisplayTest(unittest.TestCase):
             "css/dead.css": "@font-face{font-family:A;src:url(a.woff2);}",
         })
         self.assertEqual(_by_rule(result, "perf.font_display_missing"), [])
+
+    def test_a_commented_declaration_is_no_declaration(self):
+        result = _audit({
+            "index.html": '<html><head><link rel="stylesheet" href="/css/f.css"></head>'
+                          "<body><p>x</p></body></html>",
+            "css/f.css": "@font-face{font-family:A;/* font-display: swap; */src:url(a.woff2);}",
+        })
+        findings = _by_rule(result, "perf.font_display_missing")
+        self.assertEqual(len(findings), 1)
 
 
 class PreloadTest(unittest.TestCase):
@@ -276,6 +352,19 @@ class PreloadTest(unittest.TestCase):
                           "</head><body><p>x</p></body></html>",
         })
         self.assertEqual(_by_rule(result, "perf.preload_target_missing"), [])
+
+    def test_a_first_party_absolute_preload_to_nothing_is_critical(self):
+        """The most explicit spelling of a missing file must not pass
+        silently just because it carries a scheme and host."""
+        result = _audit({
+            "index.html": "<html><head>"
+                          '<link rel="preload" href="https://example.com/fonts/gone.woff2" as="font">'
+                          "</head><body><p>x</p></body></html>",
+        })
+        findings = _by_rule(result, "perf.preload_target_missing")
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0]["severity"], "critical")
+        self.assertEqual(findings[0]["subject"], "/fonts/gone.woff2")
 
 
 class ThirdPartyTest(unittest.TestCase):

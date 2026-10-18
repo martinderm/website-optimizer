@@ -61,6 +61,7 @@ BUDGET_FONT_BYTES = 100 * 1024
 FONT_EXTENSIONS = (".woff2", ".woff", ".ttf", ".otf", ".eot")
 FONT_FACE_RE = re.compile(r"@font-face\s*\{([^}]*)\}", re.IGNORECASE | re.DOTALL)
 FONT_DISPLAY_RE = re.compile(r"font-display\s*:", re.IGNORECASE)
+CSS_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 CSS_URL_RE = re.compile(r"url\(\s*['\"]?([^'\"\)\s]+)['\"]?\s*\)", re.IGNORECASE)
 SCHEME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
 
@@ -101,8 +102,12 @@ def _resolve(source: str, url: str, host: str) -> str | None:
         return urls.path_of(raw, host)
     if raw.startswith("/"):
         return urls.key(raw)
+    # Relative to the page's directory, the way a browser resolves it.
+    # `posixpath.join`, not string concatenation: the directory of a top-level
+    # page is `/`, and `"/" + "/" + raw` keeps a double slash that `served`
+    # never holds, so root-level relative references would silently miss.
     directory = posixpath.dirname("/" + source)
-    return urls.key(directory + "/" + raw)
+    return urls.key(posixpath.join(directory, raw))
 
 
 def _origin(url: str) -> str | None:
@@ -151,22 +156,25 @@ def _file_size(root: Path, key: str) -> int | None:
 
 
 def budget_findings(pages: list[Page], root: Path, served: set[str], host: str) -> list[dict]:
-    """Per-page weight against the reference budgets.
+    """Weight against the reference budgets, keyed on the file (D52).
 
-    Stylesheets and scripts are summed per page — every page loads what it
-    declares. Images are read through the hero budget conservatively (see the
-    constant): only the largest image counts, so a page with ten small images
-    and one huge one reports the huge one, not ten findings. Fonts are
-    budgeted per file and aggregated site-wide below, so they are collected
-    here but reported there.
+    A heavy file in a site-wide template is one defect, not one per page it
+    renders into — so css, js and font files are reported once each, naming
+    the pages that load them. The page total still matters: when no single
+    file is over budget but their sum is, the composition itself is the
+    finding and the page is its subject. Images are page-local enough that
+    the largest image per page stays a page finding (see the constant above
+    for why the largest stands in for the hero).
     """
     findings = []
+    css_files: dict[str, set[str]] = {}
+    js_files: dict[str, set[str]] = {}
+    css_sizes: dict[str, int] = {}
+    js_sizes: dict[str, int] = {}
     font_files: dict[str, set[str]] = {}
     for page in pages:
-        css_bytes = 0
-        js_bytes = 0
-        largest_image = 0
-        largest_name = ""
+        page_css: list[str] = []
+        page_js: list[str] = []
         for sheet in page.stylesheets:
             key = _resolve(page.source, sheet["href"], host)
             if key is None or key not in served:
@@ -174,7 +182,9 @@ def budget_findings(pages: list[Page], root: Path, served: set[str], host: str) 
             size = _file_size(root, key)
             if size is None:
                 continue
-            css_bytes += size
+            css_files.setdefault(key, set()).add(page.source)
+            css_sizes[key] = size
+            page_css.append(key)
             for font_key in _font_files(root, key, page.source, host):
                 font_files.setdefault(font_key, set()).add(page.source)
         for script in page.scripts:
@@ -184,7 +194,15 @@ def budget_findings(pages: list[Page], root: Path, served: set[str], host: str) 
             size = _file_size(root, key)
             if size is None:
                 continue
-            js_bytes += size
+            js_files.setdefault(key, set()).add(page.source)
+            js_sizes[key] = size
+            page_js.append(key)
+        _composition_finding(findings, page.source, "Stylesheets", page_css,
+                             css_sizes, BUDGET_CSS_BYTES)
+        _composition_finding(findings, page.source, "Scripts", page_js,
+                             js_sizes, BUDGET_JS_BYTES)
+        largest_image = 0
+        largest_name = ""
         for image in page.images:
             for candidate in [image["src"]] + _srcset_files(image["srcset"]):
                 if not candidate:
@@ -197,25 +215,28 @@ def budget_findings(pages: list[Page], root: Path, served: set[str], host: str) 
                     continue
                 if size > largest_image:
                     largest_image, largest_name = size, key
-        if css_bytes > BUDGET_CSS_BYTES:
-            findings.append(_finding(
-                "perf.budget_exceeded", WARNING,
-                f"Stylesheets on this page weigh {css_bytes} bytes against a "
-                f"{BUDGET_CSS_BYTES} budget: shared CSS counts on every page "
-                f"that loads it.",
-                css_bytes, f"<= {BUDGET_CSS_BYTES}", page.source, "page weight"))
-        if js_bytes > BUDGET_JS_BYTES:
-            findings.append(_finding(
-                "perf.budget_exceeded", WARNING,
-                f"Scripts on this page weigh {js_bytes} bytes against a "
-                f"{BUDGET_JS_BYTES} budget.",
-                js_bytes, f"<= {BUDGET_JS_BYTES}", page.source, "page weight"))
         if largest_image > BUDGET_IMAGE_BYTES:
             findings.append(_finding(
                 "perf.budget_exceeded", WARNING,
                 f"The largest image on this page weighs {largest_image} bytes "
                 f"against a {BUDGET_IMAGE_BYTES} hero budget: {largest_name}.",
                 largest_image, f"<= {BUDGET_IMAGE_BYTES}", page.source, "page weight"))
+    for key in sorted(css_files):
+        if css_sizes[key] > BUDGET_CSS_BYTES:
+            findings.append(_finding(
+                "perf.budget_exceeded", WARNING,
+                f"Stylesheet {key} weighs {css_sizes[key]} bytes against a "
+                f"{BUDGET_CSS_BYTES} budget, loaded by "
+                f"{len(css_files[key])} page(s).",
+                css_sizes[key], f"<= {BUDGET_CSS_BYTES}", key, "page weight"))
+    for key in sorted(js_files):
+        if js_sizes[key] > BUDGET_JS_BYTES:
+            findings.append(_finding(
+                "perf.budget_exceeded", WARNING,
+                f"Script {key} weighs {js_sizes[key]} bytes against a "
+                f"{BUDGET_JS_BYTES} budget, loaded by "
+                f"{len(js_files[key])} page(s).",
+                js_sizes[key], f"<= {BUDGET_JS_BYTES}", key, "page weight"))
     for font_key in sorted(font_files):
         size = _file_size(root, font_key)
         if size is not None and size > BUDGET_FONT_BYTES:
@@ -226,6 +247,27 @@ def budget_findings(pages: list[Page], root: Path, served: set[str], host: str) 
                 f"{len(font_files[font_key])} page(s).",
                 size, f"<= {BUDGET_FONT_BYTES}", font_key, "page weight"))
     return findings
+
+
+def _composition_finding(findings: list[dict], subject: str, kind: str,
+                         keys: list[str], sizes: dict[str, int], budget: int) -> None:
+    """The sum is over budget though no single file is.
+
+    Reported on the page, because the composition lives there: several light
+    files adding up is a template decision, not a file defect. Silent when a
+    file finding already names the cause, so the two never stack.
+    """
+    total = sum(sizes[key] for key in keys)
+    if total <= budget:
+        return
+    if any(sizes[key] > budget for key in keys):
+        return
+    findings.append(_finding(
+        "perf.budget_exceeded", WARNING,
+        f"{kind} on this page weigh {total} bytes against a {budget} "
+        f"budget: no single file is over, the composition is "
+        f"({', '.join(sorted(set(keys))) or 'nothing served'}).",
+        total, f"<= {budget}", subject, "page weight"))
 
 
 def _font_files(root: Path, css_key: str, source: str, host: str) -> list[str]:
@@ -252,7 +294,7 @@ def _font_files(root: Path, css_key: str, source: str, host: str) -> list[str]:
         elif target.startswith("/"):
             key = urls.key(target)
         else:
-            key = urls.key(directory + "/" + target)
+            key = urls.key(posixpath.join(directory, target))
         if key is None:
             continue
         if key.lower().endswith(FONT_EXTENSIONS):
@@ -260,8 +302,8 @@ def _font_files(root: Path, css_key: str, source: str, host: str) -> list[str]:
     return found
 
 
-def blocking_scripts(pages: list[Page]) -> list[dict]:
-    """Parser-blocking scripts, keyed on `src`.
+def blocking_scripts(pages: list[Page], host: str) -> list[dict]:
+    """Parser-blocking scripts, keyed on the resolved target.
 
     A classic script in `<head>` without `defer` or `async` stops the parser:
     nothing below it — content, styles, images — proceeds until it has loaded
@@ -269,7 +311,8 @@ def blocking_scripts(pages: list[Page]) -> list[dict]:
     blocks only what follows it, which is the author's placement decision, not
     a first-paint defect. External or internal makes no difference to the
     parser, so both are judged; whether the host is foreign is the
-    third-party rule's question.
+    third-party rule's question. Grouped by resolved target, not by spelling:
+    `/js/a.js` and `https://example.com/js/a.js` are one file and one finding.
     """
     by_src: dict[str, set[str]] = {}
     for page in pages:
@@ -280,7 +323,8 @@ def blocking_scripts(pages: list[Page]) -> list[dict]:
                 continue
             if script["type"] == "module":
                 continue
-            by_src.setdefault(script["src"], set()).add(page.source)
+            target = _resolve(page.source, script["src"], host) or script["src"]
+            by_src.setdefault(target, set()).add(page.source)
     findings = []
     for src in sorted(by_src):
         count = len(by_src[src])
@@ -317,7 +361,9 @@ def font_display_files(pages: list[Page], root: Path, served: set[str], host: st
             text = candidate.read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        faces = FONT_FACE_RE.findall(text)
+        # Comments are not declarations: `/* font-display: swap */` in a
+        # commented-out block must not silence a real miss.
+        faces = FONT_FACE_RE.findall(CSS_COMMENT_RE.sub("", text))
         if not faces:
             continue
         missing = sum(1 for block in faces if not FONT_DISPLAY_RE.search(block))
@@ -336,15 +382,17 @@ def preload_targets(pages: list[Page], root: Path, served: set[str], host: str) 
     """Preloads the build does not serve, keyed on target.
 
     A preload is a high-priority fetch instruction: one pointing at nothing
-    spends the browser's earliest request on a 404. External preloads are not
-    a build question — the build cannot contain another host — so they are
-    skipped here and inventoried by the third-party rule instead.
+    spends the browser's earliest request on a 404. Only foreign preloads are
+    skipped — the build cannot contain another host. A first-party absolute
+    URL resolves like a relative one; skipping it would let the most explicit
+    spelling of a missing file pass silently.
     """
     by_href: dict[str, set[str]] = {}
     for page in pages:
         for preload in page.preloads:
             href = preload["href"]
-            if _origin(href) is not None:
+            origin = _origin(href)
+            if origin is not None and not _is_first_party(origin, host):
                 continue
             key = _resolve(page.source, href, host)
             if key is None or key in served:
@@ -391,9 +439,9 @@ def third_party_origins(pages: list[Page], host: str) -> list[dict]:
         count = len(by_origin[origin])
         findings.append(_finding(
             "perf.third_party_origin", WARNING,
-            f"{origin} is referenced by {count} page(s): every one of them "
-            f"waits on another operator's infrastructure. Name and justify each "
-            f"one, individually.",
+            f"{origin} is referenced by {count} page(s). The markup cannot "
+            f"show whether that is the site's own infrastructure or someone "
+            f"else's — name and justify each origin, individually.",
             count, "first-party delivery, or a named justification", origin,
             "markup > external reference"))
     return findings
@@ -417,7 +465,7 @@ def audit_pages(pages: list[Page], root: Path, host: str) -> dict[str, Any]:
     weighed = [page for page in pages if not page.is_404]
     findings: list[dict] = []
     findings += budget_findings(weighed, root, served, host)
-    findings += blocking_scripts(weighed)
+    findings += blocking_scripts(weighed, host)
     findings += font_display_files(weighed, root, served, host)
     findings += preload_targets(weighed, root, served, host)
     findings += third_party_origins(weighed, host)
