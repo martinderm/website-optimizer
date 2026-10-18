@@ -73,11 +73,21 @@ the sitemap" actually means. Consequences worth knowing:
   anchor-text guidance in `references/internal-linking.md` — "read more" in body
   content, ten identical links to one target — is a rule this tool **cannot**
   measure. That is stated there rather than left to be discovered.
-- **Redirects.** A link to a URL the build does not serve is reported even when
-  the live site redirects it somewhere useful. The build's file set is the
-  authority here; `public/_redirects` and `.htaccess` are not read. A site that
-  links to its own redirect sources will see them here, and that is a judgement
-  the report hands to the reader rather than making.
+- **Redirects.** A link to a redirect *source* is answered, not missing: the
+  build's `_redirects` and `.htaccess` are read, and their sources count as
+  served. `_redirects` paths match exactly, `*` splats by prefix; `Redirect`
+  directives match exactly; R-flag `RewriteRule` patterns match as regexes,
+  the way the server matches them (verbatim anchors, search semantics, `NC`
+  honored). Such a link draws no graph edge — where the redirect leads is
+  unknowable statically, so reachability and depth never see it.
+- **What redirect acceptance does not do.** Whole-site rules (HTTPS/www
+  canonical), bare `.*` catch-alls and `/*` splats never accept: they answer
+  everything and route nothing, and blanket-acceptance would silence the
+  whole rule. Non-redirect rewrites are not redirects. `RewriteCond` lines
+  are not evaluated, so conditional rules may accept more than the server
+  would. `:placeholder` segments in `_redirects` and `RedirectMatch`
+  directives are not read. Whether a redirect leads somewhere useful stays
+  `redirects`' live question.
 - **Pages excluded by `ignore_path`.** They are not audited, so their links are
   not followed: a page reachable only from `admin/` reads as unreachable.
 - **Links added by JavaScript.** Only what the markup contains is in the graph.

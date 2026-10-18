@@ -37,6 +37,7 @@ from urllib.parse import urlsplit
 
 from ... import pages as pages_module
 from ... import urls
+from ... import redirect_rules
 from ...errors import CapabilityError
 from ...report import TOOL_NAME, TOOL_VERSION
 
@@ -126,8 +127,14 @@ def _distances(start: str, edges: dict[str, set[str]]) -> dict[str, int]:
 
 # --- the graph -------------------------------------------------------------
 
-def audit_pages(page_list, served: set[str], host: str) -> dict[str, Any]:
-    """Run the three graph rules over a page set and the URL space it lives in."""
+def audit_pages(page_list, served: set[str], host: str, redirects=None) -> dict[str, Any]:
+    """Run the three graph rules over a page set and the URL space it lives in.
+
+    `redirects` is the redirect-source set from `redirect_rules` (exact paths,
+    prefixes, patterns). A link to a source is answered, not missing — but it
+    draws no graph edge: where the redirect leads is unknowable statically, so
+    reachability and depth never see it. None behaves exactly as before.
+    """
     findings: list[dict] = []
     aliases = _page_alias_map(page_list)
 
@@ -145,6 +152,8 @@ def audit_pages(page_list, served: set[str], host: str) -> dict[str, Any]:
                 other = aliases.get(target)
                 if other is not None:
                     edges.setdefault(page.source, set()).add(other)
+            elif redirects is not None and redirect_rules.matches(redirects, target):
+                continue
             else:
                 missing.setdefault(target, []).append((page.source, link["href"]))
 
@@ -221,7 +230,9 @@ def run(config, live: bool = False, run: str | None = None, **_ignored) -> dict[
 
     page_set = pages_module.resolve(config, live=False)
     root = pages_module.find_static_dir(config.static_dir)
-    result = audit_pages(page_set.pages, urls.served(root), config.domain)
+    result = audit_pages(
+        page_set.pages, urls.served(root), config.domain,
+        redirect_rules.sources_from_build(root))
 
     findings = result["findings"]
     critical = sum(1 for f in findings if f["severity"] == CRITICAL)

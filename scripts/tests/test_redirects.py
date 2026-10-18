@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from wo.capabilities.redirects import audit as redirect_audit  # noqa: E402
-from wo.capabilities.redirects.parse import (  # noqa: E402
+from wo.redirect_rules import (  # noqa: E402
     MappingError, clean_regex_to_path, dedupe, load_mappings,
 )
 from wo.config import SiteConfig  # noqa: E402

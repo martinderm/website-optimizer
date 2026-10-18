@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from ...report import TOOL_NAME, TOOL_VERSION
-from .parse import MappingError, dedupe, load_mappings
+from ...redirect_rules import MappingError, dedupe, load_mappings
 
 CRITICAL = "critical"
 WARNING = "warning"

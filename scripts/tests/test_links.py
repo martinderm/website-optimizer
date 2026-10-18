@@ -272,5 +272,56 @@ class ContractTest(unittest.TestCase):
             jsonschema.validate(report, jsonschema.load_schema(SCHEMA)), [])
 
 
+class RedirectSourcesTest(unittest.TestCase):
+    """A link to a redirect source is answered, not broken.
+
+    The build's `_redirects` and `.htaccess` name URLs the server responds to.
+    Reporting links to them as missing targets is a false positive with a real
+    shape — the visitor arrives. Each format is tested through the file the
+    build actually serves, with a control run proving the same links report
+    without the files.
+    """
+
+    FILES = {
+        "index.html": (
+            '<html><head></head><body>'
+            '<a href="/bio/">bio</a>'
+            '<a href="/project/anything/">wildcard</a>'
+            '<a href="/project/mudgroup3/">legacy</a>'
+            "</body></html>"
+        ),
+        "_redirects": (
+            "/bio/ /about/ 301\n"
+            "/project/* /projects/:splat 301\n"
+        ),
+        ".htaccess": (
+            "RewriteEngine On\n"
+            "RewriteRule ^(?:portfolio/items|project)/mudgroup3/?$ "
+            "/projects/coffee-table/ [R=301,L]\n"
+        ),
+    }
+
+    def _audit_redirects(self, files, host="example.com"):
+        from wo import redirect_rules  # noqa: E402
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            pages = _write_site(root, files)
+            sources = redirect_rules.sources_from_build(root)
+            return links.audit_pages(
+                pages, url_module.served(root), host, sources)
+
+    def test_redirect_sources_are_not_missing_targets(self):
+        result = self._audit_redirects(dict(self.FILES))
+        self.assertEqual(_by_rule(result, "link.target_missing"), [])
+
+    def test_same_links_report_without_the_files(self):
+        files = {k: v for k, v in self.FILES.items() if k.endswith(".html")}
+        result = self._audit_redirects(files)
+        missing = _by_rule(result, "link.target_missing")
+        self.assertEqual(
+            sorted(f["subject"] for f in missing),
+            ["/bio", "/project/anything", "/project/mudgroup3"])
+
+
 if __name__ == "__main__":
     unittest.main()
