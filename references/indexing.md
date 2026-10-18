@@ -8,7 +8,7 @@ references:
   - https://developers.google.com/search/docs/crawling-indexing/robots/intro
   - https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap
   - https://developers.google.com/search/docs/crawling-indexing/ask-google-to-recrawl
-  - https://www.bing.com/webmasters/help/submit-a-sitemap-to-bing-55d7b80d
+  - https://www.bing.com/webmasters/help/sitemaps-3b5cf6ed
 last_verified: 2026-10-15
 review_due: 2027-01-15
 ---

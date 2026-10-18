@@ -7,7 +7,7 @@ applies_to: [website-optimizer]
 references:
   - https://web.dev/articles/vitals
   - https://web.dev/articles/optimize-lcp
-  - https://developer.mozilla.org/docs/Web/Performance/Guides/Caching
+  - https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching
 last_verified: 2026-10-15
 review_due: 2027-01-15
 ---

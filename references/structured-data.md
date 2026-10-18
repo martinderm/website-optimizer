@@ -107,7 +107,7 @@ when the page really contains that structure:
 1. Parse the JSON-LD blocks out of the built HTML — a syntax error is silent in
    the browser.
 2. Validate against the schema at
-   `https://www.validator.schema.org/` (vocabulary) and Google's Rich Results
+   `https://validator.schema.org/` (vocabulary) and Google's Rich Results
    Test (what actually produces a rich result).
 3. Run the `schema` capability once it lands; until then, a malformed block
    inside a valid one is not detected by anything here.

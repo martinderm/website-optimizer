@@ -5,7 +5,7 @@ evidence_level: normative
 support_level: fully_supported
 applies_to: [website-optimizer]
 references:
-  - https://developer.wordpress.org/apis/wp-cli/
+  - https://developer.wordpress.org/cli/commands/
   - https://www.yoast.com/wordpress/plugins/seo/
 last_verified: 2026-10-15
 review_due: 2027-01-15

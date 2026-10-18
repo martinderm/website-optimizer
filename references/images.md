@@ -7,7 +7,7 @@ applies_to: [website-optimizer]
 references:
   - https://developer.mozilla.org/docs/Web/HTML/Reference/Elements/img
   - https://web.dev/articles/responsive-images
-  - https://ogp.me/docs/image-metadata/
+  - https://ogp.me/
   - https://favicon.io/html-favicon/
 last_verified: 2026-10-15
 review_due: 2027-01-15
