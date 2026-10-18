@@ -12,8 +12,10 @@ It measures and advises. It does not build, host, or deploy.
 
 ## Status
 
-Round 10. Seven capabilities work and produce append-only evidence runs, the
-reference set is complete, and `docs/system-map/` maps the tool contracts.
+v0.8.1 · 8 capabilities · 276 tests · 0 open issues. The reference set is
+complete, and `docs/system-map/` maps the tool contracts. Planned work lives
+in [GitHub Issues](https://github.com/martinderm/website-optimizer/issues),
+never in a file here.
 
 | Command | What it does |
 |---|---|
@@ -36,7 +38,7 @@ while file sizes exist only in a build at all. `crawler-files` takes
 two rules that need a build leave `rules_run`.
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
-**[decision-log.md](decision-log.md)** carries decisions D1–D60 with their
+**[decision-log.md](decision-log.md)** carries decisions D1–D61 with their
 support level and evidence anchors.
 
 ## Repository layout
@@ -141,14 +143,18 @@ and no CI is configured (D39). Those are decisions with reasons, not gaps waitin
 to be filled, so they are not issues. The decision log says why.
 
 The issues that do exist share a shape: a reference file describes something the
-tool cannot measure. `internal-linking.md` was the whole of it until the link
-graph landed — 102 lines about orphan pages, anchor text and depth with no rule
-behind any of it — and `indexing.md`'s and `llm-visibility.md`'s files were the
-next, closed by `crawler-files`. What remains is `hreflang`, pagination and
-faceted navigation, and `video.md`'s poster, preload and captions. The tool is
-honest about what it claims and does; the reference set claims more. Reading a
-reference file as a description of what the audit checks is the mistake that list
-exists to prevent.
+tool cannot measure yet. `internal-linking.md` was the whole of it until the link
+graph landed; `indexing.md` and `llm-visibility.md` followed with `crawler-files`;
+`performance.md`'s static half and `video.md`'s poster and preload with the last
+two rounds. What remains honestly unmeasured: `hreflang`, pagination and faceted
+navigation, captions (deliberately — presence is not correctness), lab and field
+numbers, and redirect targets. The reference set still claims more than the audit
+checks; reading a reference file as a description of what the audit checks is the
+mistake that list exists to prevent.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
 
 ### Standard Template for `AGENTS.md`
 
