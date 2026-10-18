@@ -14,9 +14,9 @@ It answers two questions:
 
 It measures and advises. It does not build, host, or deploy.
 
-**Status:** v0.8.1 · 8 capabilities · 276 tests · 0 open issues. The reference
-set is complete, and `docs/system-map/` maps the tool contracts. Planned work
-lives in [GitHub Issues](https://github.com/martinderm/website-optimizer/issues),
+**Status:** The skill audits build output and live sites through one entry
+point; `docs/system-map/` maps the tool contracts. Planned work lives in
+[GitHub Issues](https://github.com/martinderm/website-optimizer/issues),
 never in a file here.
 
 - [Quick start](#quick-start)
@@ -64,7 +64,7 @@ report the crawl's reach as if it were the site's architecture — that is why
 `performance` raises instead.
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
-**[decision-log.md](decision-log.md)** carries decisions D1–D61 with their
+**[decision-log.md](decision-log.md)** carries the decisions with their
 support level and evidence anchors.
 
 ## How it reads a site
@@ -93,7 +93,7 @@ site.
 - `SKILL.md` — router and source-of-truth table
 - `PLAN.md` — design, migration map, phases
 - `decision-log.md` — durable decisions with reasons
-- `references/` — 13 rule files, each with a source and a support level
+- `references/` — rule files, each with a source and a support level
 - `scripts/` — Python 3 tooling, stdlib only, one entry point
 - `docs/system-map/` — ICM system map over the tool subsystem
 
@@ -184,20 +184,10 @@ Deviations from the shared authoring guide are recorded with their reason in
 file in this repository. A local backlog goes stale where nobody looks; an issue
 is where the trigger for a deferred decision is recorded.
 
-Known and not open: `compare` cannot tell a site change from a page that rendered
-differently (D45), the fold measurement exists but is not run automatically (D40),
-and no CI is configured (D39). Those are decisions with reasons, not gaps waiting
-to be filled, so they are not issues. The decision log says why.
-
-The issues that do exist share a shape: a reference file describes something the
-tool cannot measure yet. `internal-linking.md` was the whole of it until the link
-graph landed; `indexing.md` and `llm-visibility.md` followed with `crawler-files`;
-`performance.md`'s static half and `video.md`'s poster and preload with the last
-two rounds. What remains honestly unmeasured: `hreflang`, pagination and faceted
-navigation, captions (deliberately — presence is not correctness), lab and field
-numbers, and redirect targets. The reference set still claims more than the audit
-checks; reading a reference file as a description of what the audit checks is the
-mistake that list exists to prevent.
+An issue opens when a reference file describes something the tool cannot
+measure yet. What is deliberately not built lives in
+[decision-log.md](decision-log.md) with its reasons — decisions, not gaps
+waiting to be filled.
 
 ## License
 
