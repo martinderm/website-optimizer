@@ -48,6 +48,12 @@ REGISTRY = {
         "module": "wo.capabilities.links.audit",
         "schema": "links-report.schema.json",
     },
+    # `performance` weighs files and reads delivery attributes. Sizes exist only
+    # in a build, so like `links` it raises on a crawl rather than guessing.
+    "performance": {
+        "module": "wo.capabilities.performance.audit",
+        "schema": "performance-report.schema.json",
+    },
     "schema": {
         "module": "wo.capabilities.schema.audit",
         "schema": "schema-report.schema.json",

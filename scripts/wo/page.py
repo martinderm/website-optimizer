@@ -66,6 +66,16 @@ class Page:
     # sources as `<source>` children rather than a `src`, so absence of `src` is
     # not a defect and is not recorded.
     videos: list[dict] = field(default_factory=list)
+    # Delivery facts the performance capability weighs: external scripts with
+    # their loading attributes, stylesheets, preloads, and embeds. Only
+    # addresses and delivery attributes are kept — a URL is a field, and
+    # `defer`/`async`/`as` describe delivery, not content. Inline script and
+    # style bodies are not retained: they are authored code, and no rule reads
+    # them (D13).
+    scripts: list[dict] = field(default_factory=list)
+    stylesheets: list[dict] = field(default_factory=list)
+    preloads: list[dict] = field(default_factory=list)
+    iframes: list[dict] = field(default_factory=list)
 
     @property
     def description_length(self) -> int:
@@ -79,6 +89,7 @@ class _Extractor(HTMLParser):
         super().__init__(convert_charrefs=True)
         self._in_title = False
         self._in_json_ld = False
+        self._in_head = False
         self._title_parts: list[str] = []
         self._json_ld_chunks: list[str] = []
         self.page = Page(source="")
@@ -88,6 +99,8 @@ class _Extractor(HTMLParser):
 
         if tag == "html":
             self.page.lang = attr.get("lang")
+        elif tag == "head":
+            self._in_head = True
         elif tag == "title":
             self._in_title = True
             self.page.title_found = True
@@ -103,6 +116,16 @@ class _Extractor(HTMLParser):
                     "sizes": attr.get("sizes", "").strip() or None,
                     "type": attr.get("type", "").strip() or None,
                 })
+            else:
+                rels = set(attr.get("rel", "").lower().split())
+                href = attr.get("href", "").strip()
+                if "stylesheet" in rels and href:
+                    self.page.stylesheets.append({"href": href})
+                if "preload" in rels and href:
+                    self.page.preloads.append({
+                        "href": href,
+                        "as": attr.get("as", "").strip().lower() or None,
+                    })
         elif tag == "h1":
             self.page.h1_count += 1
         elif tag == "main":
@@ -146,10 +169,23 @@ class _Extractor(HTMLParser):
         elif tag == "script":
             if attr.get("type", "").lower() == "application/ld+json":
                 self._in_json_ld = True
+            elif "src" in attr and attr.get("src", "").strip():
+                self.page.scripts.append({
+                    "src": attr.get("src", "").strip(),
+                    "defer": "defer" in attr,
+                    "async": "async" in attr,
+                    "type": attr.get("type", "").strip().lower(),
+                    "in_head": self._in_head,
+                })
+        elif tag == "iframe":
+            if "src" in attr and attr.get("src", "").strip():
+                self.page.iframes.append({"src": attr.get("src", "").strip()})
 
     def handle_endtag(self, tag):
         if tag == "title":
             self._in_title = False
+        elif tag == "head":
+            self._in_head = False
         elif tag == "script" and self._in_json_ld:
             self._in_json_ld = False
 

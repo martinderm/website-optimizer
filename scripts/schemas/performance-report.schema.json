@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martinderm/website-optimizer/schemas/performance-report.schema.json",
+  "title": "Static Performance Audit Report",
+  "description": "What the build weighs and what blocks its first paint. Static only: file sizes exist only in a build, and lab numbers (LCP, INP, CLS) are not measured here.",
+  "type": "object",
+  "allOf": [
+    {"$ref": "report-base.schema.json"},
+    {
+      "type": "object",
+      "required": ["source", "summary"],
+      "properties": {
+        "source": {
+          "type": "object",
+          "required": ["kind"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {"enum": ["static_dir"]},
+            "path": {"type": ["string", "null"]}
+          }
+        },
+        "summary": {
+          "type": "object",
+          "required": [
+            "audited_pages", "ignored_pages", "budgets_exceeded",
+            "third_party_origins",
+            "total_critical_issues", "total_warnings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "audited_pages": {"type": "integer", "minimum": 0},
+            "ignored_pages": {"type": "integer", "minimum": 0},
+            "budgets_exceeded": {"type": "integer", "minimum": 0},
+            "third_party_origins": {"type": "integer", "minimum": 0},
+            "total_critical_issues": {"type": "integer", "minimum": 0},
+            "total_warnings": {"type": "integer", "minimum": 0}
+          }
+        }
+      }
+    }
+  ]
+}
