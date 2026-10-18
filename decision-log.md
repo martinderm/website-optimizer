@@ -1689,6 +1689,42 @@ qualifies, over it the page has an image-weight problem whatever the hero is.
 A lazy-loaded below-fold giant still fires — knowingly, at warning severity,
 and documented in the capability README rather than hidden.
 
+## D61 - `links` accepts redirect sources, and the parsers get one home
+
+**Status:** accepted
+**Date:** 2026-10-18
+**Support level:** observed
+
+**Decision:** `link.target_missing` accepts redirect sources from the build's
+`_redirects` and `.htaccess` as served. `_redirects` paths match exactly,
+`*` splats by prefix; `Redirect` directives match exactly; R-flag
+`RewriteRule` patterns match as regexes. The parsers move from
+`capabilities/redirects/parse.py` to `wo/redirect_rules.py` (D57, second
+caller); `redirects` imports them unchanged. No new rule, no schema change —
+patch version 0.8.1 (0.6.1 precedent: the result moved, so the receipt says
+which side).
+
+**Why regexes, not cleaned sample paths.** The probing parsers reduce a rule
+to one requestable URL (first alternation branch, sample slugs). Reusing that
+for acceptance would keep reporting every other branch as broken — on the
+reference `.htaccess`, whose rules are alternations throughout, the exact
+false positive this change removes. The server matches patterns, so the audit
+matches patterns: verbatim anchors, search semantics, `NC` honored.
+
+**What never accepts, and why.** Whole-site rules, bare `.*` and `/*` answer
+everything and route nothing — accepting them would silence the entire rule
+for one line of infrastructure (the D54 review proved all three with failing
+cases before the fix). Non-redirect rewrites are not redirects.
+`RewriteCond` is not evaluated and `:placeholder` segments and
+`RedirectMatch` are not read; each is a stated limit, not a missed case. An
+accepted source draws no graph edge: the destination is unknowable
+statically, so reachability and depth never see it.
+
+**Probing untouched.** The acceptance skip list is separate from the probing
+skip list on purpose: `.*` stays probed (verified behavior must not move)
+while never accepting. The D54 review verified the moved parsers byte-identical
+before the fixes landed.
+
 **What the D54 review caught.** The foreign-context review found three majors
 nothing else had: page-relative URLs from top-level pages resolved to `//`-keys
 `served` never holds (string concatenation where `posixpath.join` belongs);
