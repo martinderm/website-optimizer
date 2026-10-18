@@ -1,5 +1,9 @@
 # Website Optimizer Skill
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](scripts/)
+[![stdlib only](https://img.shields.io/badge/dependencies-zero-brightgreen.svg)](scripts/)
+
 `website-optimizer` is a shared skill for auditing and improving websites for
 search visibility and delivery quality.
 
@@ -10,36 +14,79 @@ It answers two questions:
 
 It measures and advises. It does not build, host, or deploy.
 
-## Status
-
-v0.8.1 · 8 capabilities · 276 tests · 0 open issues. The reference set is
-complete, and `docs/system-map/` maps the tool contracts. Planned work lives
-in [GitHub Issues](https://github.com/martinderm/website-optimizer/issues),
+**Status:** v0.8.1 · 8 capabilities · 276 tests · 0 open issues. The reference
+set is complete, and `docs/system-map/` maps the tool contracts. Planned work
+lives in [GitHub Issues](https://github.com/martinderm/website-optimizer/issues),
 never in a file here.
 
-| Command | What it does |
-|---|---|
-| `wo.py on-page` | SEO and accessibility signals inside a page |
-| `wo.py redirects` | do redirect rules match what the live server does |
-| `wo.py images` | image delivery, dimensions, formats, icons, video posters |
-| `wo.py schema` | JSON-LD structure and completeness |
-| `wo.py links` | the internal link graph: broken targets, orphans, depth |
-| `wo.py performance` | page weight against budgets, render-blocking scripts, font-display, preload targets, third-party origins |
-| `wo.py crawler-files` | robots.txt, the sitemap and llms.txt |
-| `wo.py compare` | attribute what changed between two runs |
+- [Quick start](#quick-start)
+- [Capabilities](#capabilities)
+- [How it reads a site](#how-it-reads-a-site)
+- [Verified, not assumed](#verified-not-assumed)
+- [Repository layout](#repository-layout)
+- [Scope boundary](#scope-boundary)
+- [Design commitments](#design-commitments)
+- [Open work](#open-work)
+- [License](#license)
 
-`on-page`, `images`, `schema` take `--live`, which renders pages in a browser
-instead of reading build output. For a static site both paths must agree; for a
-dynamic one only the live path has anything to read. `links` and `performance`
-are build-only and raise on `--live`: a crawl sees part of a site, and a
-partial graph reports the crawl's reach as if it were the site's architecture —
-while file sizes exist only in a build at all. `crawler-files` takes
-`--live` too, where it fetches four documents instead of rendering anything — the
-two rules that need a build leave `rules_run`.
+## Quick start
+
+```
+python scripts/wo.py init-site --site-url https://example.com
+python scripts/wo.py on-page              # static output, one evidence run
+python scripts/wo.py on-page --live       # render pages in a browser instead
+python scripts/wo.py links                # internal link graph (build output only)
+python scripts/wo.py compare               # attribute what changed since the last run
+```
+
+Configure with `site.optimizer.toml` (portable, commit it) and
+`site.optimizer.local.toml` (machine paths, do not commit it). Every run
+writes append-only evidence: `report.json` plus `receipt.json`, never
+overwritten, always comparable. See [SKILL.md](SKILL.md) for routing.
+
+## Capabilities
+
+| Command | What it does | Reads |
+|---|---|---|
+| `wo.py on-page` | SEO and accessibility signals inside a page | build, or browser with `--live` |
+| `wo.py images` | image delivery, dimensions, formats, icons, video posters | build, or browser with `--live` |
+| `wo.py schema` | JSON-LD structure and completeness | build, or browser with `--live` |
+| `wo.py crawler-files` | robots.txt, the sitemap and llms.txt | build files, or 3 URLs with `--live` (minus 2 rules) |
+| `wo.py links` | the internal link graph: broken targets, orphans, depth | build only — raises on `--live` |
+| `wo.py performance` | page weight against budgets, render-blocking scripts, font-display, preload targets, third-party origins | build only — raises on `--live` |
+| `wo.py redirects` | do redirect rules match what the live server does | live probes only |
+| `wo.py compare` | attribute what changed between two runs | stored runs |
+
+For a static site both paths must agree; for a dynamic one only the live path
+has anything to read. A crawl sees part of a site, so a partial graph would
+report the crawl's reach as if it were the site's architecture — that is why
+`links` raises instead. File sizes exist only in a build at all — that is why
+`performance` raises instead.
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
 **[decision-log.md](decision-log.md)** carries decisions D1–D61 with their
 support level and evidence anchors.
+
+## How it reads a site
+
+```mermaid
+flowchart LR
+    B[build output] --> S[static audit]
+    L[live site] --> C[browser render]
+    L --> R[redirect probes]
+    L --> F[three documents]
+    S --> E[append-only evidence]
+    C --> E
+    R --> E
+    F --> E
+    E --> K[compare]
+```
+
+Static capabilities read the build directory. `--live` renders pages in a
+browser (`on-page`, `images`, `schema`), probes redirect rules, or fetches the
+three crawler documents — never from a hook, always on request: a crawl costs
+minutes and depends on consent state. `compare` reads stored runs, never the
+site.
 
 ## Repository layout
 
@@ -156,7 +203,8 @@ mistake that list exists to prevent.
 
 MIT — see [LICENSE](LICENSE).
 
-### Standard Template for `AGENTS.md`
+<details>
+<summary>Standard template for <code>AGENTS.md</code> (workspace wiring)</summary>
 
 ```markdown
 ## website-optimizer
@@ -166,3 +214,5 @@ improve websites for SEO, structured data, performance, images, video, and
 accessibility. See [SKILL.md](../skills/website-optimizer/SKILL.md) for routing and
 [PLAN.md](../skills/website-optimizer/PLAN.md) for its current construction state.
 ```
+
+</details>
