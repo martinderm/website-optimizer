@@ -18,6 +18,7 @@
 - [quality](quality.md) - live / verified, 2026-10-15
 - [crawl](crawl.md) - live / verified, 2026-10-15
 - [page-set](page-set.md) - live / verified, 2026-10-15
+- [performance](performance.md) - live / verified, 2026-10-18
 
 Geplant, noch nicht implementiert - als `ghost` geführt, keine Karte:
 `compare` als Prozesskarte unter

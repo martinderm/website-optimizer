@@ -12,7 +12,7 @@ It measures and advises. It does not build, host, or deploy.
 
 ## Status
 
-Round 10. Six capabilities work and produce append-only evidence runs, the
+Round 10. Seven capabilities work and produce append-only evidence runs, the
 reference set is complete, and `docs/system-map/` maps the tool contracts.
 
 | Command | What it does |
@@ -22,19 +22,21 @@ reference set is complete, and `docs/system-map/` maps the tool contracts.
 | `wo.py images` | image delivery, dimensions, formats, icons, video posters |
 | `wo.py schema` | JSON-LD structure and completeness |
 | `wo.py links` | the internal link graph: broken targets, orphans, depth |
+| `wo.py performance` | page weight against budgets, render-blocking scripts, font-display, preload targets, third-party origins |
 | `wo.py crawler-files` | robots.txt, the sitemap and llms.txt |
 | `wo.py compare` | attribute what changed between two runs |
 
 `on-page`, `images`, `schema` take `--live`, which renders pages in a browser
 instead of reading build output. For a static site both paths must agree; for a
-dynamic one only the live path has anything to read. `links` is build-only and
-raises on `--live`: a crawl sees part of a site, and a partial graph reports the
-crawl's reach as if it were the site's architecture. `crawler-files` takes
+dynamic one only the live path has anything to read. `links` and `performance`
+are build-only and raise on `--live`: a crawl sees part of a site, and a
+partial graph reports the crawl's reach as if it were the site's architecture —
+while file sizes exist only in a build at all. `crawler-files` takes
 `--live` too, where it fetches four documents instead of rendering anything — the
 two rules that need a build leave `rules_run`.
 
 **[PLAN.md](PLAN.md)** is the design source of truth, and
-**[decision-log.md](decision-log.md)** carries decisions D1–D57 with their
+**[decision-log.md](decision-log.md)** carries decisions D1–D60 with their
 support level and evidence anchors.
 
 ## Repository layout
@@ -59,6 +61,7 @@ against the tools they replaced:
 | `schema` finds real defects | it found a `sameAs` inconsistency across 171 vs 2 pages |
 | `images` counts correctly | every rule re-counted independently against the built output |
 | `links` finds real defects | 3 broken targets and 7 orphans on the reference site, every one checked by hand in the markup |
+| `performance` weighs the build | 193 pages: 66 image findings re-weighed byte-exact from disk, 3 third-party origins confirmed in markup, the three zeros (blocking, font-display, preload) confirmed absent |
 | `crawler-files` agrees with `links` | the two pages missing from the sitemap are the two pages `links` called unreachable |
 | `--live` agrees with the static build | 25 real pages, all three capabilities, no difference either way |
 

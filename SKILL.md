@@ -15,10 +15,11 @@ description: >-
 
 ## Status
 
-**Round 5 — seven capabilities, static and live.**
+**Round 6 — eight capabilities, static and live.**
 
 `on-page`, `images`, `schema` and `crawler-files` audit build output or, with
 `--live`, the site itself; `links` builds the internal link graph of a build;
+`performance` weighs the build and scans what blocks its first paint;
 `redirects` probes live rules; `compare` attributes what changed. All write
 append-only evidence runs. The reference set is complete and `docs/system-map/`
 maps the tool contracts.
@@ -37,6 +38,7 @@ python scripts/wo.py compare               # attribute what changed since the la
 python scripts/wo.py images                # image delivery, dimensions, icons
 python scripts/wo.py schema                # JSON-LD structure and completeness
 python scripts/wo.py links                 # internal link graph (build output only)
+python scripts/wo.py performance           # weight, blockers, fonts (build output only)
 python scripts/wo.py crawler-files          # robots.txt, sitemap, llms.txt
 python scripts/wo.py runs                 # list stored runs
 python scripts/wo.py on-page --dry-run    # audit, write nothing

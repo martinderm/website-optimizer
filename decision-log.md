@@ -1657,3 +1657,45 @@ workspace whose `static_dir` is its own root and which builds into `public/` wou
 therefore have had icons and posters checked against the wrong directory — a
 latent wrong answer of exactly the kind the file-existence rules exist to prevent.
 Both now use the shared resolver.
+
+## D60 - Weight and first paint are their own capability, and the reference is half measured
+
+**Status:** accepted
+**Date:** 2026-10-18
+**Support level:** partially_supported
+
+**Decision:** `perf.budget_exceeded`, `perf.render_blocking_script`,
+`perf.font_display_missing`, `perf.preload_target_missing` and
+`perf.third_party_origin` are rules of a new `performance` capability, which is
+build-only and raises on `live=True`. `Page` gains `scripts[]`,
+`stylesheets[]`, `preloads[]` and `iframes[]` delivery fields. LCP, INP, CLS
+themselves, caching headers, hero detection and justified-vs-pasted
+third parties stay unmeasured, and `references/performance.md` says exactly
+which half is advice.
+
+**Why its own capability (D51 a second time).** `images` checks delivery of
+single files — formats, dimensions, existence. Weight is a sum over
+references, blocking a property of how something is embedded. Both rules laid
+into `images` would burden it with rules its own definition excludes, the same
+shape D51 named for the link graph. Two shapes of finding follow from the same
+split: weight per page (every page loads what it declares), everything else
+keyed on its target (D52) — a shared-template defect is one defect.
+
+**Why the hero budget reads the largest image.** Which image is heroic is a
+heuristic, and a heuristic finding is a false positive with a schedule (the
+rejection Issue #7 records for a "hero is lazy-loaded" rule). The largest
+image against the hero budget is conservative instead: under it every image
+qualifies, over it the page has an image-weight problem whatever the hero is.
+A lazy-loaded below-fold giant still fires — knowingly, at warning severity,
+and documented in the capability README rather than hidden.
+
+**What the D54 review caught.** The foreign-context review found three majors
+nothing else had: page-relative URLs from top-level pages resolved to `//`-keys
+`served` never holds (string concatenation where `posixpath.join` belongs);
+CSS/JS weight reported per page where D52 keys per target (now per file, with
+the page total kept for the composition case only); first-party absolute
+preload targets skipped wholesale with the foreign ones. Plus the message
+overclaim on third-party origins and comment-aware `font-display` matching.
+The `//`-key bug is the one that justifies the mechanism: it lived in a
+helper, both call sites shared it, and no test exercised a root-level relative
+reference — each now does.

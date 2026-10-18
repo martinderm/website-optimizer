@@ -107,3 +107,24 @@ wish.
 - [ ] Fingerprinted assets served immutable; HTML revalidating
 - [ ] Asset budgets defined and measured in CI
 - [ ] Field data checked in Search Console after launch
+
+## Skill coverage
+
+What the `performance` capability (v0.8.0) measures, and what stays advice:
+
+- **Budgets — measured** (`perf.budget_exceeded`): CSS, JS, largest image and
+  font files against the working values above, in bytes on disk.
+- **Hero preloaded — half measured**: whether a preload *target exists* is
+  measured (`perf.preload_target_missing`); whether the LCP element *is*
+  preloaded is not, because hero detection from markup alone is a heuristic.
+- **Fonts — one of four measured**: missing `font-display` is measured
+  (`perf.font_display_missing`); self-hosting, subsetting and fallback
+  size-adjustment are not.
+- **Render delay — measured** (`perf.render_blocking_script`): classic scripts
+  in `<head>` without `defer`/`async`. Long tasks, workers and hydration are
+  runtime behavior, not markup.
+- **Third parties — named, not judged** (`perf.third_party_origin`): one
+  inventory line per origin with a page count. Justification stays human.
+- **LCP/INP/CLS values, caching headers, field data — not measured.** They
+  need lab or field observation (Lighthouse, PageSpeed Insights, CrUX), which
+  is a network dependency and a separate decision, not a rule in this tool.

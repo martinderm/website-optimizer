@@ -24,7 +24,7 @@ Zusätzlich trennt die Trennung Messung von Urteil: eine Regel sieht nur diese
 Felder, nie eine Aussage über die Seite (D15).
 
 ## Shape
-`scripts/wo/page.py` `class Page` — Felder: `source`, `is_404`, `title`, `title_found`, `lang`, `description`, `canonical`, `robots`, `og`, `twitter`, `h1_count`, `has_main`, `has_skip_link`, `images_total`, `images_missing_alt`, `schemas`, plus `description_length`. Pro Bild zusätzlich `src_present`, das ein fehlendes von einem leeren `src`-Attribut unterscheidet (D31).
+`scripts/wo/page.py` `class Page` — Felder: `source`, `is_404`, `title`, `title_found`, `lang`, `description`, `canonical`, `robots`, `og`, `twitter`, `h1_count`, `has_main`, `has_skip_link`, `images_total`, `images_missing_alt`, `schemas`, `images[]`, `icons[]`, `links[]`, `videos[]`, `scripts[]`, `stylesheets[]`, `preloads[]`, `iframes[]`, plus `description_length`. Pro Bild zusätzlich `src_present`, das ein fehlendes von einem leeren `src`-Attribut unterscheidet (D31). Die vier Lieferfelder (`scripts`, `stylesheets`, `preloads`, `iframes`) halten nur Adressen und Ladeattribute — kein Inline-Code, keine Prosa (D13, D60).
 
 Drei Zugänge: `extract_page_from_html()` für Markup als String, `extract_page()` als Datei-Wrapper, `iter_html_files()`. Der String-Eingang ist der Live-Weg, und er ist kein zweiter Parser — beide laufen durch denselben `_Extractor`. Das ist der Punkt: eine Capability, die gegen `Page` geschrieben ist, kann nicht erkennen, woher das Markup kam, und kann sich deshalb versehentlich keine Regel leisten, die nur auf Dateien funktioniert (D33).
 
@@ -40,7 +40,7 @@ Gehört zu [On-Page](on-page.md), [Page-Set](page-set.md). Prozesse: [Audit-Stat
 **Looks like but is not:** `Page` ist keine Website-Record-Karte im Workspace und keine `memory/references/`-Zone. Es ist ein Laufzeit-Objekt eines Audits.
 
 ## If you change this
-- **Hits:** [On-Page](on-page.md), [Images](images.md), [Schema](schema.md) — jede Regel liest aus diesen Feldern; [Page-Set](page-set.md), weil es beide Quellen hier zusammenführt; [Audit-Report](audit-report.md) — `pages[]` wird hieraus befüllt; Paritätstest in [Qualität](quality.md), weil Feldnamen und Extraktionsgrenzen die Befunde verändern.
+- **Hits:** [On-Page](on-page.md), [Images](images.md), [Schema](schema.md), [Performance](performance.md) — jede Regel liest aus diesen Feldern; [Page-Set](page-set.md), weil es beide Quellen hier zusammenführt; [Audit-Report](audit-report.md) — `pages[]` wird hieraus befüllt; Paritätstest in [Qualität](quality.md), weil Feldnamen und Extraktionsgrenzen die Befunde verändern.
 - **Does not hit:** [Receipt](receipt.md); die Regel*texte* in `references/*` beschreiben, was korrekt ist, nicht wie gemessen wird; [Envelope](envelope.md).
 
 ## Surfaces
